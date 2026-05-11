@@ -6,6 +6,7 @@ from typing import List
 from app.database import get_db
 from app.models import ExchangeRate
 from app.schemas import ExchangeRateSchema, ExchangeRateCreateUpdate
+from app.services.exchange_rate_service import exchange_rate_service
 
 router = APIRouter(
     prefix="/api/rates",
@@ -102,3 +103,31 @@ def update_exchange_rate(
     db.refresh(rate)
     
     return rate
+
+
+@router.post("/sync", status_code=status.HTTP_200_OK)
+async def sync_exchange_rates(db: Session = Depends(get_db)):
+    """
+    Fetch and sync exchange rates from DolarApi.com to database.
+    
+    This endpoint:
+    1. Calls DolarApi.com to get current rates
+    2. Caches the result for 1 hour
+    3. Saves rates to database
+    4. Returns sync status
+    
+    Returns:
+        dict: {'status': 'success'|'error', 'synced_count': int, 'message': str}
+    
+    Raises:
+        HTTPException: If sync fails completely
+    """
+    result = await exchange_rate_service.sync_rates_to_db(db)
+    
+    if result['status'] == 'error':
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=result['message']
+        )
+    
+    return result
