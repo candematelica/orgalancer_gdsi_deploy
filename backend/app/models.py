@@ -3,7 +3,6 @@ from sqlalchemy import Column, String, Float, ForeignKey
 from sqlalchemy.orm import relationship
 from app.database import Base
 
-
 class User(Base):
     __tablename__ = "users"
 
@@ -30,3 +29,15 @@ class FinancialConfiguration(Base):
     profit_margin = Column(Float, nullable=False, default=0.0)
 
     user = relationship("User", back_populates="financial_config")
+
+class Client(Base):
+    __tablename__ = "clients"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    name = Column(String, nullable=False)
+    email = Column(String, unique=True, nullable=False, index=True)
+    client_type = Column(String, nullable=False)
+    phone_number = Column(String, nullable=True)
+    address = Column(String, nullable=True)
+    website = Column(String, nullable=True)
+    extra_info = Column(String, nullable=True)
