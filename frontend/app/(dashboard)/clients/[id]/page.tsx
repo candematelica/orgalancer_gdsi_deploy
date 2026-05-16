@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
+import NewClientModal from "@/app/(dashboard)/_components/new_client_modal";
 
 type Client = {
   id: string;
@@ -19,28 +20,33 @@ export default function ClientDetailPage() {
   const params = useParams();
   const [client, setClient] = useState<Client | null>(null);
   const [loading, setLoading] = useState(true);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+
+  const fetchClient = useCallback(async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`/api/clients/${params.id}`, {
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
+      });
+
+      if (res.status === 401) {
+        router.push("/login");
+        return;
+      }
+
+      const data = await res.json();
+      if (res.ok) setClient(data);
+
+    } finally {
+      setLoading(false);
+    }
+  }, [params.id, router]);
 
   useEffect(() => {
-    const fetchClient = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        const res = await fetch(`/api/clients/${params.id}`, {
-          headers: {
-            "Authorization": `Bearer ${token}`,
-          },
-        });
-        if (res.status === 401) {
-          router.push("/login");
-          return;
-        }
-        const data = await res.json();
-        if (res.ok) setClient(data);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchClient();
-  }, [params.id]);
+  }, [fetchClient]);
 
   if (loading) {
     return (
@@ -70,10 +76,16 @@ export default function ClientDetailPage() {
             <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </button>
-        <div>
+        <div className="flex items-center gap-3">
           <h1 className="text-3xl font-bold text-violet-700">{client.name}</h1>
-          <p className="text-sm text-gray-400 mt-0.5">{client.client_type}</p>
+          <button
+            onClick={() => setEditModalOpen(true)}
+            className="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-purple-500 text-white text-sm font-semibold hover:opacity-90 transition-opacity shadow"
+          >
+            Editar
+          </button>
         </div>
+        <p className="text-sm text-gray-400 mt-0.5">{client.client_type}</p>
       </div>
 
       {/* Grid de cards */}
@@ -170,6 +182,18 @@ export default function ClientDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Modal */}
+      {editModalOpen && client && (
+        <NewClientModal
+          onClose={() => setEditModalOpen(false)}
+          onSuccess={() => {
+            setEditModalOpen(false);
+            fetchClient();
+          }}
+          clientToEdit={client}
+        />
+      )}
     </div>
   );
 }

@@ -3,41 +3,46 @@
 import { useState } from "react";
 
 type ClientForm = {
-  name: string;
-  email: string;
-  client_type: string;
-  phone_number: string;
-  address: string;
-  website: string;
-  extra_info: string;
+    id: string;
+    name: string;
+    email: string;
+    client_type: string;
+    phone_number: string;
+    address: string;
+    website: string;
+    extra_info: string;
 };
 
 type Props = {
-  onClose: () => void;
-  onSuccess: () => void;
+    onClose: () => void;
+    onSuccess: () => void;
+    clientToEdit?: ClientForm | null;
 };
 
 const CLIENT_TYPES = [
-  "Empresa",
-  "Autónomo / Freelancer",
-  "ONG / Fundación",
-  "Particular",
-  "Agencia",
-  "Otro",
+    "Empresa",
+    "Autónomo / Freelancer",
+    "ONG / Fundación",
+    "Particular",
+    "Agencia",
+    "Otro",
 ];
 
-export default function NewClientModal({ onClose, onSuccess }: Props) {
-  const [form, setForm] = useState<ClientForm>({
-    name: "",
-    email: "",
-    client_type: "",
-    phone_number: "",
-    address: "",
-    website: "",
-    extra_info: "",
-  });
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+export default function NewClientModal({ onClose, onSuccess, clientToEdit }: Props) {
+    const isEditMode = !!clientToEdit;
+
+    const [form, setForm] = useState({
+        name: clientToEdit?.name ?? "",
+        email: clientToEdit?.email ?? "",
+        client_type: clientToEdit?.client_type ?? "",
+        phone_number: clientToEdit?.phone_number ?? "",
+        address: clientToEdit?.address ?? "",
+        website: clientToEdit?.website ?? "",
+        extra_info: clientToEdit?.extra_info ?? "",
+    });
+
+    const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
 
     const handleChange = (
         e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -64,8 +69,13 @@ export default function NewClientModal({ onClose, onSuccess }: Props) {
         try {
             const token = localStorage.getItem("token");
 
-            const res = await fetch("/api/clients", {
-                method: "POST",
+            const url = isEditMode
+                ? `/api/clients/${clientToEdit!.id}`
+                : "/api/clients";
+            const method = isEditMode ? "PUT" : "POST";
+
+            const res = await fetch(url, {
+                method,
                 headers: {
                     "Content-Type": "application/json",
                     "Authorization": `Bearer ${token}`,
@@ -76,7 +86,7 @@ export default function NewClientModal({ onClose, onSuccess }: Props) {
             const data = await res.json();
 
             if (!res.ok) {
-                setError(data.error || "Error al guardar el cliente");
+                setError(data.error || (isEditMode ? "Error al actualizar el cliente" : "Error al guardar el cliente"));
                 return;
             }
 
@@ -98,8 +108,8 @@ export default function NewClientModal({ onClose, onSuccess }: Props) {
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
                     <div>
-                        <h2 className="text-lg font-semibold text-gray-800">Nuevo cliente</h2>
-                        <p className="text-sm text-gray-400">Completá los datos del cliente</p>
+                        <h2 className="text-lg font-semibold text-gray-800">{isEditMode ? "Editar Cliente" : "Nuevo Cliente"}</h2>
+                        <p className="text-sm text-gray-400">{isEditMode ? "Modificá los datos del cliente" : "Completá los datos del cliente"}</p>
                     </div>
                     <button
                         onClick={onClose}
@@ -248,7 +258,10 @@ export default function NewClientModal({ onClose, onSuccess }: Props) {
                             disabled={loading}
                             className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-purple-500 text-white text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-60"
                         >
-                            {loading ? "Guardando..." : "Guardar cliente"}
+                            {loading
+                                ? (isEditMode ? "Actualizando..." : "Guardando...")
+                                : (isEditMode ? "Actualizar" : "Guardar")
+                            }
                         </button>
                     </div>
                 </form>
