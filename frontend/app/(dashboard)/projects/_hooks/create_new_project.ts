@@ -1,19 +1,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getUser } from "../../../_hooks/get_user";
-import { API_BASE } from "../_lib/api";
 
 type ProjectFormData = {
-  client_mail: string;
+  client_id: string;
   name: string;
-  contract_type: "fixed_price" | "hourly" | "retainer";
+  contract_type: "hourly" | "fixed_price" | "retainer"; 
   estimated_budget: number | null;
   deadline: Date | null;
 };
 
 const INITIAL_STATE: ProjectFormData = {
-  client_mail: "",
+  client_id: "",
   name: "",
   contract_type: "fixed_price",
   estimated_budget: null,
@@ -21,44 +19,36 @@ const INITIAL_STATE: ProjectFormData = {
 };
 
 export function useCreateProjectForm() {
-  const user = getUser();
   const [formData, setFormData] = useState<ProjectFormData>(INITIAL_STATE);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
 
-  const[clients, setClients] = useState<{ id: number; email: string; name: string }[]>([]);
+  const getToken = () => localStorage.getItem("token");
 
   useEffect(() => {
     const fetchClients = async () => {
       try {
-        const response = await fetch(`${API_BASE}/clients`); 
+        const token = getToken();
+        const response = await fetch("/api/clients", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
         
-        if (!response.ok) {
-          throw new Error(`Error ${response.status}: No se pudieron cargar los clientes`);
-        }
-
-        const clientsData = await response.json();
-        
-        const finalData = Array.isArray(clientsData) ? clientsData : (clientsData.clients || []);
-        setClients(finalData);
+        if (!response.ok) throw new Error("No se pudieron cargar los clientes");
+        const data = await response.json();
+        setClients(data);
       } catch (err) {
-        console.error("Error fetching clients:", err);
+        console.error(err);
       }
     };
-
     fetchClients();
-  }, []); 
+  }, []);
 
   async function handleSubmit(e: React.FormEvent): Promise<boolean> {
     e.preventDefault();
 
-    if (!user) {
-      setError("Usuario no autenticado");
-      return false;
-    }
-
-    if (!formData.client_mail || !formData.name || !formData.contract_type || !formData.estimated_budget) {
+    if (!formData.client_id || !formData.name || !formData.estimated_budget) {
       setError("Los campos con * son obligatorios");
       return false;
     }
@@ -67,79 +57,41 @@ export function useCreateProjectForm() {
     setLoading(true);
 
     try {
-      const client_mail = formData.client_mail.trim().toLowerCase();
-      const clientsResponse = await fetch(`${API_BASE}/clients`);
-      console.log("Respuesta de /clients:", clientsResponse);
-      const clientsData = await clientsResponse.json();
-      
-      const client = clientsData.find((c) => c.email.toLowerCase() === client_mail);
-
-      const response = await fetch(`${API_BASE}/projects`, {  
+      const token = getToken();
+      const response = await fetch("/api/projects", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}` 
+        },
         body: JSON.stringify({
-          user_id: user.id,
-          client_id: client.id,
+          client_id: formData.client_id,
           name: formData.name,
           contract_type: formData.contract_type,
           estimated_budget: formData.estimated_budget,
-          deadline: formData.deadline
-            ? formData.deadline.toISOString().split("T")[0] 
-            : null,
+          deadline: formData.deadline ? formData.deadline.toISOString().split("T")[0] : null,
         }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const errorData = await response.json();
-
-        if (errorData.detail) {
-
-          if (Array.isArray(errorData.detail)) {
-            const messages = errorData.detail.map((err: any) => {
-              const field = err.loc[err.loc.length - 1];
-
-              if (err.type === "missing") {
-                return `El campo "${field}" es obligatorio`;
-              }
-
-              return err.msg.replace("Value error, ", "");
-            });
-
-            throw new Error(messages.join(". "));
-          }
-
-          if (typeof errorData.detail === "string") {
-            throw new Error(errorData.detail);
-          }
-        }
-
-        if (errorData.message) {
-          throw new Error(errorData.message);
-        }
-
-        throw new Error("Error en el servidor");
+        throw new Error(data.error || "Error al crear el proyecto");
       }
-      window.dispatchEvent(new CustomEvent("projectCreated", { detail: formData }));
-      setFormData(INITIAL_STATE); 
+
+      window.dispatchEvent(new CustomEvent("projectCreated"));
+      setFormData(INITIAL_STATE);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
+      return true;
 
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al crear el proyecto");
+      setError(err instanceof Error ? err.message : "Error fatal");
       return false;
     } finally {
       setLoading(false);
     }
-    return true;
   }
 
-  return {
-    formData,
-    setFormData,
-    handleSubmit,
-    error,
-    saved,
-    loading,
-    clients,
-  };
+  return { formData, setFormData, handleSubmit, error, saved, loading, clients };
 }

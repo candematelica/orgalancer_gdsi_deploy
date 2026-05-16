@@ -1,35 +1,158 @@
-from fastapi import APIRouter, HTTPException, Depends
-from sqlalchemy.orm import Session
+from datetime import date
+from typing import List, Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.orm import Session, joinedload
+
 from app.database import get_db
-from app.models import Project, Client, User
-from app.schemas.project import ProjectCreate, ProjectResponse
+from app.models import Project, Client, ProjectState
+from app.schemas.project import (
+    ProjectCreate,
+    ProjectListItem,
+    ProjectResponse,
+    ProjectSummary,
+)
+from app.dependencies import get_current_user_id
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
+_ACTIVE_STATES = {ProjectState.active}
+_ALERT_THRESHOLDS = [(3, "urgent"), (7, "warning"), (14, "soon")]
+
+
+# --- POST ---
 
 @router.post("/", response_model=ProjectResponse, status_code=201)
-def create_project(project: ProjectCreate, db: Session = Depends(get_db)):
+def create_project(
+    project_data: ProjectCreate, 
+    db: Session = Depends(get_db),
+    current_user_id: str = Depends(get_current_user_id)
+):
+    if project_data.client_id:
+        client = db.query(Client).filter(
+            Client.id == project_data.client_id, 
+            Client.user_id == current_user_id
+        ).first()
+        if not client:
+            raise HTTPException(status_code=404, detail="Cliente no encontrado o no autorizado")
 
-    user = db.query(User).filter(User.id == project.user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado")
-
-    client = db.query(Client).filter(Client.id == project.client_id).first()
-    if not client:
-        raise HTTPException(status_code=404, detail="Cliente no encontrado")
-
-    data = project.model_dump()
-    new = Project(**data, state="active")
+    data = project_data.model_dump()
+    new_project = Project(
+        **data, 
+        user_id=current_user_id, 
+        state=ProjectState.active,
+        start_date=date.today()
+    )
+    
     try:
-        db.add(new)
+        db.add(new_project)
         db.commit()
-        db.refresh(new)
+        db.refresh(new_project)
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail="Error al crear el proyecto: " + str(e))
-    return new
+        raise HTTPException(status_code=500, detail=f"Error al crear el proyecto: {str(e)}")
+        
+    return _to_response(new_project)
 
-@router.get("/", response_model=list[ProjectResponse])
-def list_projects(db: Session = Depends(get_db)):
-    projects = db.query(Project).all()
-    return projects
+
+# --- GET ---
+
+@router.get("/stats", response_model=ProjectSummary)
+def get_project_stats(
+    db: Session = Depends(get_db),
+    current_user_id: str = Depends(get_current_user_id),
+):
+    projects = db.query(Project).filter(Project.user_id == current_user_id).all()
+    billable = [p for p in projects if p.state != ProjectState.cancelled]
+
+    return ProjectSummary(
+        active_count=sum(1 for p in projects if p.state in _ACTIVE_STATES),
+        total_earned=sum(float(p.earned) for p in billable),
+        total_budget=sum(float(p.estimated_budget) for p in billable),
+    )
+
+
+@router.get("/", response_model=List[ProjectListItem])
+def list_projects(
+    state: Optional[ProjectState] = Query(None, description="active | completed | cancelled"),
+    db: Session = Depends(get_db),
+    current_user_id: str = Depends(get_current_user_id),
+):
+    query = (
+        db.query(Project)
+        .options(joinedload(Project.client), joinedload(Project.tasks))
+        .filter(Project.user_id == current_user_id)
+    )
+    if state:
+        query = query.filter(Project.state == state)
+
+    return [_to_list_item(p) for p in query.order_by(Project.deadline.asc()).all()]
+
+
+@router.get("/{project_id}", response_model=ProjectListItem)
+def get_project(
+    project_id: str,
+    db: Session = Depends(get_db),
+    current_user_id: str = Depends(get_current_user_id),
+):
+    project = (
+        db.query(Project)
+        .options(joinedload(Project.client), joinedload(Project.tasks))
+        .filter(Project.id == project_id, Project.user_id == current_user_id)
+        .first()
+    )
+    if not project:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    return _to_list_item(project)
+
+
+# --- helpers ---
+
+def _progress(total: int, completed: int) -> int:
+    return round((completed / total) * 100) if total > 0 else 0
+
+
+def _deadline_info(deadline_date: Optional[date]) -> tuple[Optional[int], Optional[str]]:
+    if not deadline_date:
+        return None, None
+
+    days = (deadline_date - date.today()).days
+    alert = next((level for limit, level in _ALERT_THRESHOLDS if 0 <= days <= limit), None)
+    return days, alert
+
+
+def _to_list_item(p: Project) -> ProjectListItem:
+    total = len(p.tasks)
+    completed = sum(1 for t in p.tasks if t.is_completed)
+    days, alert = _deadline_info(p.deadline)
+
+    return ProjectListItem(
+        id=p.id, name=p.name, description=p.description,
+        state=p.state, contract_type=p.contract_type,
+        estimated_budget=float(p.estimated_budget), earned=float(p.earned),
+        start_date=p.start_date, deadline=p.deadline,
+        client_id=p.client_id,
+        client_name=p.client.name if p.client else None,
+        total_tasks=total, completed_tasks=completed,
+        progress_percentage=_progress(total, completed),
+        days_until_deadline=days, deadline_alert=alert,
+    )
+
+
+def _to_response(p: Project) -> ProjectResponse:
+    total = len(p.tasks)
+    completed = sum(1 for t in p.tasks if t.is_completed)
+    days, alert = _deadline_info(p.deadline)
+
+    return ProjectResponse(
+        id=p.id, user_id=p.user_id,
+        client_id=p.client_id,
+        client_name=p.client.name if p.client else None,
+        name=p.name, description=p.description,
+        contract_type=p.contract_type, state=p.state,
+        estimated_budget=float(p.estimated_budget), earned=float(p.earned),
+        start_date=p.start_date, deadline=p.deadline,
+        total_tasks=total, completed_tasks=completed,
+        progress_percentage=_progress(total, completed),
+        days_until_deadline=days, deadline_alert=alert,
+    )

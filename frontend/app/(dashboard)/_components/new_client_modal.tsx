@@ -3,41 +3,41 @@
 import { useState } from "react";
 
 type ClientForm = {
-    name: string;
-    email: string;
-    client_type: string;
-    phone_number: string;
-    address: string;
-    website: string;
-    extra_info: string;
+  name: string;
+  email: string;
+  client_type: string;
+  phone_number: string;
+  address: string;
+  website: string;
+  extra_info: string;
 };
 
 type Props = {
-    onClose: () => void;
-    onSuccess: () => void;
+  onClose: () => void;
+  onSuccess: () => void;
 };
 
 const CLIENT_TYPES = [
-    "Empresa",
-    "Autónomo / Freelancer",
-    "ONG / Fundación",
-    "Particular",
-    "Agencia",
-    "Otro",
+  "Empresa",
+  "Autónomo / Freelancer",
+  "ONG / Fundación",
+  "Particular",
+  "Agencia",
+  "Otro",
 ];
 
 export default function NewClientModal({ onClose, onSuccess }: Props) {
-    const [form, setForm] = useState<ClientForm>({
-        name: "",
-        email: "",
-        client_type: "",
-        phone_number: "",
-        address: "",
-        website: "",
-        extra_info: "",
-    });
-    const [error, setError] = useState("");
-    const [loading, setLoading] = useState(false);
+  const [form, setForm] = useState<ClientForm>({
+    name: "",
+    email: "",
+    client_type: "",
+    phone_number: "",
+    address: "",
+    website: "",
+    extra_info: "",
+  });
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
     const handleChange = (
         e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -62,9 +62,14 @@ export default function NewClientModal({ onClose, onSuccess }: Props) {
 
         setLoading(true);
         try {
+            const token = localStorage.getItem("token");
+
             const res = await fetch("/api/clients", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`,
+                },
                 body: JSON.stringify(form),
             });
 
