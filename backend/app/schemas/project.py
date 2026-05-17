@@ -35,6 +35,13 @@ class ProjectCreate(BaseModel):
             raise ValueError("La fecha límite no puede ser anterior a la fecha actual")
         return v
 
+class ProjectUpdate(BaseModel):
+    name: Optional[str] = None
+    contract_type: Optional[ContractType] = None
+    estimated_budget: Optional[float] = None
+    deadline: Optional[date] = None
+    state: Optional[ProjectState] = None
+
 class ProjectListItem(BaseModel):
     id: str
     name: str
