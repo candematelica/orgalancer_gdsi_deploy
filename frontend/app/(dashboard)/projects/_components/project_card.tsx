@@ -38,7 +38,7 @@ export default function ProjectCard({
 
     setCurrentState(newState); 
     try {
-      const res = await fetch(`/api/projects`, {
+      const res = await fetch(`/api/projects/${project!.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
