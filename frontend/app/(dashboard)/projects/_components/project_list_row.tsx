@@ -8,6 +8,7 @@ import DeadlineChip from "./deadline_chip";
 interface ProjectListRowProps {
   project: EnrichedProject;
   currency?: string;
+  onEdit?: (project: EnrichedProject) => void;
 }
 
 function formatCurrency(value: number, currency = "€") {
@@ -18,6 +19,7 @@ function formatCurrency(value: number, currency = "€") {
 export default function ProjectListRow({
   project,
   currency = "€",
+  onEdit,
 }: ProjectListRowProps) {
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-200 px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-4">
