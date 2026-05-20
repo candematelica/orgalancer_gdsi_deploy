@@ -8,6 +8,8 @@ import SettingsNav, { type TabId } from "./_components/settings_nav";
 import ProfileTab from "./_components/profile_tab";
 import ComingSoonTab from "./_components/coming_soon_tab";
 
+import { Settings } from "lucide-react";
+
 const TAB_VIEWS: Record<TabId, React.ReactNode> = {
   profile:       <ProfileTab />,
   notifications: <ComingSoonTab tabId="notifications" />,
@@ -24,6 +26,7 @@ export default function SettingsPage() {
       <SectionHeader
         title="Configuración"
         subtitle="Personaliza tu experiencia en Orgalancer"
+        icon={<Settings className="w-8 h-8 text-indigo-600"/>}
       />
       <div className="flex flex-col lg:flex-row gap-6 items-start">
         <SettingsNav active={activeTab} onChange={setActiveTab} />

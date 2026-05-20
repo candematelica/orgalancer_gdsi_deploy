@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import FinancesHeader from "./_components/finances_header";
+import { Wallet } from "lucide-react";
+import SectionHeader from "./../_components/section_header"
 import FinancesShell from "./_components/finances_shell";
 import FinancialForm from "./_components/financial_form";
 import TariffCalculator from "./_components/tariff_calculator";
@@ -25,10 +27,12 @@ export default function FinancesPage() {
 
   return (
     <>
-      <FinancesHeader
+      <SectionHeader
         title="Finanzas"
         subtitle="Configurá tus datos para calcular tarifas"
+        icon={<Wallet className="w-8 h-8 text-indigo-600"/>}
       />
+
       <div className="flex flex-col gap-10 px-4">
 
         <div className="max-w-2xl w-full">

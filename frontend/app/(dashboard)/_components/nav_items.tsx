@@ -12,6 +12,17 @@ export const NAV_ITEMS = [
     ),
   },
   {
+    label: "Proyectos",
+    href: "/projects",
+    icon: (
+      <svg width="18" height="18" fill="none" viewBox="0 0 24 24">
+        <rect x="2" y="7" width="20" height="14" rx="2" stroke="currentColor" strokeWidth="1.5" />
+        <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        <path d="M12 12v4M10 14h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+  {
     label: "Clientes",
     href: "/clients",
     icon: (
@@ -37,8 +48,8 @@ export const NAV_ITEMS = [
     href: "/finances",
     icon: (
       <svg width="18" height="18" fill="none" viewBox="0 0 24 24">
-        <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5" />
-        <path d="M12 7v1.5M12 15.5V17M9.5 9.5c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5c0 1.5-2.5 2.5-2.5 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        <path d="M3 17l4-4 4 4 4-5 4-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        <rect x="3" y="20" width="18" height="1.5" rx="0.75" fill="currentColor" />
       </svg>
     ),
   },

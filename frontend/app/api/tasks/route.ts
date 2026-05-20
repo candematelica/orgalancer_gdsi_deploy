@@ -4,7 +4,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const token = req.headers.get("Authorization");
 
-  const response = await fetch(`${process.env.API_URL}/clients`, {
+  const response = await fetch(`${process.env.API_URL}/tasks/`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
   if (!response.ok) {
     const errorMsg = Array.isArray(data.detail)
       ? data.detail[0].msg
-      : data.detail || "Error al crear el cliente";
+      : data.detail || "Error al crear la tarea";
 
     return NextResponse.json(
       { error: errorMsg },
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   const token = req.headers.get("Authorization");
 
-  const response = await fetch(`${process.env.API_URL}/clients`, {
+  const response = await fetch(`${process.env.API_URL}/tasks/`, {
     headers: {
       "Authorization": token || "",
     },
@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
 
   if (!response.ok) {
     return NextResponse.json(
-      { error: "Error al obtener los clientes" },
+      { error: "Error al obtener las tareas" },
       { status: response.status }
     );
   }

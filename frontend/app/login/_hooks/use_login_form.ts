@@ -32,8 +32,9 @@ export function useLoginForm() {
       if (!res.ok) {
         return set_error(data.error || "Email o contraseña incorrectos");
       }
-
-      localStorage.setItem("user", JSON.stringify(data)); 
+      
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data));
 
       set_success(true);
       setTimeout(() => {

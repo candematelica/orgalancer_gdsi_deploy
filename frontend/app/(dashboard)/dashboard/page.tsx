@@ -1,3 +1,5 @@
+import { Sparkles } from 'lucide-react';
+
 import StatCard from "./_components/stat_card";
 import PendingTasks from "./_components/pending_tasks";
 import PaymentReminders from "./_components/payment_reminders";
@@ -57,12 +59,9 @@ const stats = [
 export default function DashboardPage() {
   return (
     <>
-      {/* Header */}
-      <SectionHeader 
-        title="Dashboard" 
-        subtitle="Resumen de tu negocio freelance"
-      >
-        <button className="bg-gradient-to-r from-violet-600 to-purple-500 text-white text-sm font-semibold px-5 py-3 rounded-xl shadow hover:opacity-90 transition-opacity">
+      {/* header */}
+      <SectionHeader title="Dashboard" subtitle="Resumen de tu negocio freelance" icon={<Sparkles className="w-8 h-8 text-indigo-600" />}>
+        <button className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:shadow-lg hover:scale-[1.02] transition-all font-medium shadow-sm">
           Generar Presupuesto
         </button>
       </SectionHeader>
