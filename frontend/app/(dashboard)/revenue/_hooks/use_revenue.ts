@@ -11,6 +11,11 @@ export interface RevenueFilters {
   to?: string;
 }
 
+const CURRENCY_SYMBOL: Record<string, string> = {
+  USD: "$", EUR: "€", GBP: "£", ARS: "$",
+  MXN: "$", BRL: "R$", CLP: "$", COP: "$", JPY: "¥",
+};
+
 function toTransaction(raw: any): Transaction {
   return {
     id: raw.id,
@@ -30,8 +35,25 @@ export function useRevenue() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currency, setCurrency] = useState("$");
 
   const getToken = () => localStorage.getItem("token");
+
+  // Fetch currency from user's financial config
+  useEffect(() => {
+    const raw = localStorage.getItem("user");
+    if (!raw) return;
+    const user = JSON.parse(raw) as { id: string };
+    const api = process.env.NEXT_PUBLIC_API_URL;
+    fetch(`${api}/finances/${user.id}`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (data?.coin_type) {
+          setCurrency(CURRENCY_SYMBOL[data.coin_type] ?? data.coin_type);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const load = useCallback(async (filters: RevenueFilters = {}) => {
     const token = getToken();
@@ -95,5 +117,5 @@ export function useRevenue() {
 
   useEffect(() => { load(); }, [load]);
 
-  return { transactions, loading, error, load, save };
+  return { transactions, loading, error, load, save, currency };
 }

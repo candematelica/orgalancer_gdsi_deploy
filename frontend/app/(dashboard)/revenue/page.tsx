@@ -34,12 +34,11 @@ export default function RevenuePage() {
   const clients  = useOptions("/api/clients");
   const projects = useOptions("/api/projects");
 
-  const { transactions, loading, error, load, save } = useRevenue();
+  const { transactions, loading, error, load, save, currency } = useRevenue();
 
   const monetary = transactions.filter((t) => t.payment_type === "monetario").reduce((s, t) => s + t.amount, 0);
   const barter   = transactions.filter((t) => t.payment_type === "canje").reduce((s, t) => s + t.amount, 0);
   const total    = monetary + barter;
-  const currency = transactions[0]?.currency ?? "€";
 
   async function handleSave(tx: Parameters<typeof save>[0]) {
     await save(tx);
