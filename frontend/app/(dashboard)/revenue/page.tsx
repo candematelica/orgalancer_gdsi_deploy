@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import RevenueHeader from "./_components/revenue_header";
 import RevenueTabs, { type RevenueTab } from "./_components/revenue_tabs";
 import RevenueStatCards from "./_components/revenue_stat_cards";
-import TransactionList from "./_components/transaction_list";
+import TransactionList, { type Transaction } from "./_components/transaction_list";
 import RegisterIncomeModal from "./_components/register_income_modal";
 import { useRevenue } from "./_hooks/use_revenue";
 
@@ -26,6 +26,7 @@ function useOptions(apiPath: string): SelectOption[] {
 export default function RevenuePage() {
   const [activeTab, setActiveTab] = useState<RevenueTab>("general");
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingTx, setEditingTx] = useState<Transaction | null>(null);
   const [clientId, setClientId] = useState("");
   const [projectId, setProjectId] = useState("");
   const [fromDate, setFromDate] = useState("");
@@ -34,14 +35,29 @@ export default function RevenuePage() {
   const clients  = useOptions("/api/clients");
   const projects = useOptions("/api/projects");
 
-  const { transactions, loading, error, load, save, currency } = useRevenue();
+  const { transactions, loading, error, load, save, update, remove, currency } = useRevenue();
 
   const monetary = transactions.filter((t) => t.payment_type === "monetario").reduce((s, t) => s + t.amount, 0);
   const barter   = transactions.filter((t) => t.payment_type === "canje").reduce((s, t) => s + t.amount, 0);
   const total    = monetary + barter;
 
-  async function handleSave(tx: Parameters<typeof save>[0]) {
-    await save(tx);
+  async function handleSave(tx: Omit<Transaction, "id">) {
+    if (editingTx) {
+      await update(editingTx.id, tx);
+      setEditingTx(null);
+    } else {
+      await save(tx);
+    }
+    setModalOpen(false);
+  }
+
+  function handleEdit(tx: Transaction) {
+    setEditingTx(tx);
+    setModalOpen(true);
+  }
+
+  async function handleDelete(id: string) {
+    if (confirm("¿Eliminar este ingreso?")) await remove(id);
   }
 
   function handleTabChange(tab: RevenueTab) {
@@ -172,14 +188,20 @@ export default function RevenuePage() {
       )}
 
       {!loading && !error && (
-        <TransactionList transactions={transactions} />
+        <TransactionList
+          transactions={transactions}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+        />
       )}
 
       <RegisterIncomeModal
         open={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={() => { setModalOpen(false); setEditingTx(null); }}
         onSave={handleSave}
         currency={currency}
+        initialData={editingTx ?? undefined}
+        mode={editingTx ? "edit" : "create"}
       />
     </div>
   );

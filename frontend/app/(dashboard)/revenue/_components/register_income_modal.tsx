@@ -11,6 +11,8 @@ interface Props {
   onClose: () => void;
   onSave: (tx: Omit<Transaction, "id">) => void;
   currency: string;
+  initialData?: Transaction;
+  mode?: "create" | "edit";
 }
 
 const EMPTY = {
@@ -37,12 +39,29 @@ function useOptions(apiPath: string, enabled: boolean): SelectOption[] {
   return options;
 }
 
-export default function RegisterIncomeModal({ open, onClose, onSave, currency }: Props) {
+export default function RegisterIncomeModal({ open, onClose, onSave, currency, initialData, mode = "create" }: Props) {
   const [form, setForm] = useState(EMPTY);
   const [error, setError] = useState<string | null>(null);
 
   const clients  = useOptions("/api/clients",  open);
   const projects = useOptions("/api/projects", open);
+
+  // Pre-fill form when editing
+  useEffect(() => {
+    if (open && mode === "edit" && initialData) {
+      setForm({
+        client_id:      initialData.client_id  ?? "",
+        project_id:     initialData.project_id ?? "",
+        amount:         String(initialData.amount),
+        payment_type:   initialData.payment_type,
+        payment_method: initialData.payment_method,
+        date:           initialData.date,
+        description:    initialData.description ?? "",
+      });
+    } else if (open && mode === "create") {
+      setForm(EMPTY);
+    }
+  }, [open, mode, initialData]);
 
   if (!open) return null;
 
@@ -83,7 +102,9 @@ export default function RegisterIncomeModal({ open, onClose, onSave, currency }:
 
       <div className="relative bg-white rounded-3xl shadow-xl w-full max-w-md mx-4 p-6">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-bold text-gray-900">Registrar Ingreso</h2>
+          <h2 className="text-lg font-bold text-gray-900">
+            {mode === "edit" ? "Editar Ingreso" : "Registrar Ingreso"}
+          </h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition">
             <X className="w-5 h-5" />
           </button>
@@ -196,7 +217,7 @@ export default function RegisterIncomeModal({ open, onClose, onSave, currency }:
               type="submit"
               className="flex-1 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-semibold transition"
             >
-              Guardar
+              {mode === "edit" ? "Guardar cambios" : "Guardar"}
             </button>
           </div>
         </form>

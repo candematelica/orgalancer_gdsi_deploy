@@ -115,7 +115,57 @@ export function useRevenue() {
     }
   }
 
+  async function update(id: string, tx: Omit<Transaction, "id">): Promise<boolean> {
+    const token = getToken();
+    if (!token) return false;
+
+    try {
+      const res = await fetch(`/api/revenue/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          amount:         tx.amount,
+          currency:       tx.currency,
+          date:           tx.date,
+          payment_type:   tx.payment_type,
+          payment_method: tx.payment_method,
+          description:    tx.description ?? null,
+          project_id:     tx.project_id ?? null,
+          client_id:      tx.client_id  ?? null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setTransactions((prev) => prev.map((t) => (t.id === id ? toTransaction(data) : t)));
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al actualizar");
+      return false;
+    }
+  }
+
+  async function remove(id: string): Promise<boolean> {
+    const token = getToken();
+    if (!token) return false;
+
+    try {
+      const res = await fetch(`/api/revenue/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error);
+      }
+      setTransactions((prev) => prev.filter((t) => t.id !== id));
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al eliminar");
+      return false;
+    }
+  }
+
   useEffect(() => { load(); }, [load]);
 
-  return { transactions, loading, error, load, save, currency };
+  return { transactions, loading, error, load, save, update, remove, currency };
 }

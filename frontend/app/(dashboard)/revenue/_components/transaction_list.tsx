@@ -1,5 +1,7 @@
 "use client";
 
+import { Pencil, Trash2 } from "lucide-react";
+
 export interface Transaction {
   id: string;
   project_name: string;
@@ -16,6 +18,8 @@ export interface Transaction {
 
 interface Props {
   transactions: Transaction[];
+  onEdit?: (tx: Transaction) => void;
+  onDelete?: (id: string) => void;
 }
 
 const ICON_COLORS = [
@@ -31,7 +35,7 @@ function formatDate(dateStr: string) {
   return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
 }
 
-export default function TransactionList({ transactions }: Props) {
+export default function TransactionList({ transactions, onEdit, onDelete }: Props) {
   if (transactions.length === 0) {
     return (
       <div className="text-center py-12 text-gray-400 text-sm">
@@ -73,6 +77,28 @@ export default function TransactionList({ transactions }: Props) {
               <p className="text-xs text-gray-400">{formatDate(tx.date)}</p>
               <p className="text-xs text-gray-400">{tx.payment_method}</p>
             </div>
+
+            {/* Actions */}
+            {(onEdit || onDelete) && (
+              <div className="flex gap-1 flex-shrink-0 ml-2">
+                {onEdit && (
+                  <button
+                    onClick={() => onEdit(tx)}
+                    className="p-1.5 text-gray-400 hover:text-violet-600 hover:bg-violet-50 rounded-lg transition"
+                  >
+                    <Pencil size={14} />
+                  </button>
+                )}
+                {onDelete && (
+                  <button
+                    onClick={() => onDelete(tx.id)}
+                    className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         ))}
       </div>
