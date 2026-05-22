@@ -88,6 +88,12 @@ class TaskStatus(str, enum.Enum):
     completed = "Completada"
     blocked = "Bloqueada"
 
+class TaskPriority(str, enum.Enum):
+    low = "Baja"
+    medium = "Media"
+    high = "Alta"
+    urgent = "Urgente"
+
 class Task(Base):
     __tablename__ = "tasks"
 
@@ -96,7 +102,7 @@ class Task(Base):
     project_id = Column(String, ForeignKey("projects.id"), nullable=False, index=True)
     title = Column(String(100), nullable=False)
     description = Column(String, nullable=False)
-    priority = Column(String, nullable=False)
+    priority = Column(SQLEnum(TaskPriority), default = TaskPriority.medium, nullable=False)
     target_date = Column(String, nullable=False)
     status = Column(SQLEnum(TaskStatus), default=TaskStatus.pending, nullable=False)
     created_at = Column(String, nullable=False)
