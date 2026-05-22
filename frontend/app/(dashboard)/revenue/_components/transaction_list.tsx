@@ -4,6 +4,8 @@ export interface Transaction {
   id: string;
   project_name: string;
   client_name: string;
+  client_id?: string | null;
+  project_id?: string | null;
   amount: number;
   currency: string;
   payment_type: "monetario" | "canje";

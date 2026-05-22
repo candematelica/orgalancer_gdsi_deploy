@@ -19,10 +19,12 @@ def _migrate_tariff_columns():
             ("monthly_hours",  "FLOAT DEFAULT 160.0"),
             ("fixed_expenses", "FLOAT DEFAULT 0.0"),
         ]
+        # revenue_entries
         rows2 = conn.execute(text("PRAGMA table_info(revenue_entries)")).fetchall()
         existing2 = {r[1] for r in rows2}
         if "payment_method" not in existing2:
             conn.execute(text("ALTER TABLE revenue_entries ADD COLUMN payment_method VARCHAR DEFAULT 'Otro'"))
+
         for col, definition in additions:
             if col not in existing:
                 conn.execute(text(f"ALTER TABLE financial_configurations ADD COLUMN {col} {definition}"))

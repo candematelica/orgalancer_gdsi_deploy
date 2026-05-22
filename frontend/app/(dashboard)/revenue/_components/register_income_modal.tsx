@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { type Transaction } from "./transaction_list";
+
+interface SelectOption { id: string; name: string; }
 
 interface Props {
   open: boolean;
@@ -12,8 +14,8 @@ interface Props {
 }
 
 const EMPTY = {
-  project_name: "",
-  client_name: "",
+  client_id: "",
+  project_id: "",
   amount: "",
   payment_type: "monetario" as "monetario" | "canje",
   payment_method: "Transferencia",
@@ -21,9 +23,26 @@ const EMPTY = {
   description: "",
 };
 
+function useOptions(apiPath: string, enabled: boolean): SelectOption[] {
+  const [options, setOptions] = useState<SelectOption[]>([]);
+  useEffect(() => {
+    if (!enabled) return;
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    fetch(apiPath, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" })
+      .then((r) => r.ok ? r.json() : [])
+      .then((data: any[]) => setOptions(data.map((d) => ({ id: d.id, name: d.name }))))
+      .catch(() => {});
+  }, [apiPath, enabled]);
+  return options;
+}
+
 export default function RegisterIncomeModal({ open, onClose, onSave, currency }: Props) {
   const [form, setForm] = useState(EMPTY);
   const [error, setError] = useState<string | null>(null);
+
+  const clients  = useOptions("/api/clients",  open);
+  const projects = useOptions("/api/projects", open);
 
   if (!open) return null;
 
@@ -33,18 +52,24 @@ export default function RegisterIncomeModal({ open, onClose, onSave, currency }:
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.project_name.trim() || !form.client_name.trim() || !form.amount) {
-      setError("Completá todos los campos obligatorios.");
+    if (!form.client_id || !form.amount) {
+      setError("Seleccioná un cliente e ingresá el monto.");
       return;
     }
+
+    const client = clients.find((c) => c.id === form.client_id);
+    const project = projects.find((p) => p.id === form.project_id);
+
     onSave({
-      project_name: form.project_name.trim(),
-      client_name: form.client_name.trim(),
-      amount: parseFloat(form.amount),
+      client_id:    form.client_id,
+      project_id:   form.project_id || null,
+      client_name:  client?.name  ?? "",
+      project_name: project?.name ?? "Sin proyecto",
+      amount:       parseFloat(form.amount),
       currency,
-      payment_type: form.payment_type,
+      payment_type:   form.payment_type,
       payment_method: form.payment_type === "canje" ? "Canje" : form.payment_method,
-      date: form.date,
+      date:        form.date,
       description: form.description.trim() || undefined,
     });
     setForm(EMPTY);
@@ -54,12 +79,9 @@ export default function RegisterIncomeModal({ open, onClose, onSave, currency }:
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Backdrop */}
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
 
-      {/* Modal */}
       <div className="relative bg-white rounded-3xl shadow-xl w-full max-w-md mx-4 p-6">
-        {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-bold text-gray-900">Registrar Ingreso</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition">
@@ -86,22 +108,30 @@ export default function RegisterIncomeModal({ open, onClose, onSave, currency }:
             ))}
           </div>
 
-          <Field label="Nombre del proyecto *">
-            <input
-              value={form.project_name}
-              onChange={(e) => handleChange("project_name", e.target.value)}
-              placeholder="ej: Diseño de identidad corporativa"
+          <Field label="Cliente *">
+            <select
+              value={form.client_id}
+              onChange={(e) => handleChange("client_id", e.target.value)}
               className={INPUT_CLS}
-            />
+            >
+              <option value="">Seleccioná un cliente</option>
+              {clients.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
           </Field>
 
-          <Field label="Cliente *">
-            <input
-              value={form.client_name}
-              onChange={(e) => handleChange("client_name", e.target.value)}
-              placeholder="ej: TechStartup SL"
+          <Field label="Proyecto (opcional)">
+            <select
+              value={form.project_id}
+              onChange={(e) => handleChange("project_id", e.target.value)}
               className={INPUT_CLS}
-            />
+            >
+              <option value="">Sin proyecto</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
           </Field>
 
           <div className="grid grid-cols-2 gap-3">
@@ -115,7 +145,6 @@ export default function RegisterIncomeModal({ open, onClose, onSave, currency }:
                 className={INPUT_CLS}
               />
             </Field>
-
             <Field label="Fecha">
               <input
                 type="date"
