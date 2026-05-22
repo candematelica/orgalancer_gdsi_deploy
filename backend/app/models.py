@@ -103,3 +103,22 @@ class Task(Base):
 
     user = relationship("User")
     project = relationship("Project", back_populates="tasks")
+
+class Revenue(Base):
+    __tablename__ = "revenue_entries"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    project_id = Column(String, ForeignKey("projects.id"), nullable=True, index=True)
+    client_id = Column(String, ForeignKey("clients.id"), nullable=True, index=True)
+    
+    amount = Column(Numeric(10, 2), nullable=False)
+    currency = Column(String, nullable=False)
+    date = Column(Date, nullable=False)
+    payment_type = Column(String, nullable=False)    
+    payment_method = Column(String, nullable=True)  
+    description = Column(String, nullable=True)
+
+    user = relationship("User")
+    project = relationship("Project")
+    client = relationship("Client")
