@@ -5,7 +5,7 @@ from app.models import TaskStatus
 class TaskBase(BaseModel):
     title: str = Field(..., max_length=100)
     description: str
-    priority: str
+    priority: TaskPriority
     project_id: str
     target_date: str
 
