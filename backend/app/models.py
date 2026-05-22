@@ -86,6 +86,7 @@ class TaskStatus(str, enum.Enum):
     pending = "Pendiente"
     in_progress = "En Progreso"
     completed = "Completada"
+    blocked = "Bloqueada"
 
 class Task(Base):
     __tablename__ = "tasks"
