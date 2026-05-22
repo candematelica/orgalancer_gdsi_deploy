@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 
 from app.models import TaskStatus
+from app.models import TaskPriority
 
 class TaskBase(BaseModel):
     title: str = Field(..., max_length=100)
@@ -24,3 +25,6 @@ class TaskResponse(TaskBase):
 
 class TaskUpdateStatus(BaseModel):
     status: TaskStatus
+
+class TaskUpdatePriority(BaseModel):
+    priority: TaskPriority
