@@ -7,17 +7,30 @@ interface Project {
   name: string;
 }
 
+interface Task {
+  id: string;
+  title: string;
+  description: string;
+  priority: string;
+  target_date: string;
+  project_id: string;
+  project_name: string | null;
+  status: string;
+}
+
 interface TaskFormProps {
-  onSuccess: () => void;
+  taskToEdit?: Task | null;
+  onSuccess: (isEdit: boolean) => void;
   onError: (msg: string) => void;
   onClose: () => void;
 }
 
-export default function TaskForm({ onSuccess, onError, onClose }: TaskFormProps) {
+export default function TaskForm({ taskToEdit, onSuccess, onError, onClose }: TaskFormProps) {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [projects, setProjects] = useState<Project[]>([]);
   const [loadingProjects, setLoadingProjects] = useState(true);
+  const [selectedProjectId, setSelectedProjectId] = useState(taskToEdit?.project_id || "");
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -78,7 +91,7 @@ export default function TaskForm({ onSuccess, onError, onClose }: TaskFormProps)
 
       const targetDateLocal = new Date(targetDate.getTime() + targetDate.getTimezoneOffset() * 60000);
 
-      if (targetDateLocal < today) {
+      if (!taskToEdit && targetDateLocal < today) {
         newErrors.target_date = "La fecha no puede estar en el pasado.";
       }
     }
@@ -104,13 +117,17 @@ export default function TaskForm({ onSuccess, onError, onClose }: TaskFormProps)
         project_id: formData.get("project_id"),
         priority: formData.get("priority"),
         target_date: formData.get("target_date"),
+        status: taskToEdit?.status || "Pendiente",
       };
 
       const token = localStorage.getItem("token");
       if (!token) throw new Error("No estás autenticado");
 
-      const response = await fetch("/api/tasks", {
-        method: "POST",
+      const url = taskToEdit ? `/api/tasks/${taskToEdit.id}` : "/api/tasks";
+      const method = taskToEdit ? "PUT" : "POST";
+
+      const response = await fetch(url, {
+        method: method,
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
@@ -121,10 +138,10 @@ export default function TaskForm({ onSuccess, onError, onClose }: TaskFormProps)
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Ocurrió un error al crear la tarea");
+        throw new Error(data.error || "Ocurrió un error al guardar la tarea");
       }
 
-      onSuccess();
+      onSuccess(!!taskToEdit);
 
     } catch (err: any) {
       onError(err.message || "Error desconocido");
@@ -146,6 +163,7 @@ export default function TaskForm({ onSuccess, onError, onClose }: TaskFormProps)
           type="text"
           id="title"
           name="title"
+          defaultValue={taskToEdit?.title || ""}
           className={`w-full px-4 py-2.5 border rounded-xl text-sm text-gray-800 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-violet-400 transition-colors ${errors.title ? 'border-red-500' : 'border-gray-300'}`}
           placeholder="Ej: Desarrollo de e-commerce"
           maxLength={100}
@@ -161,6 +179,7 @@ export default function TaskForm({ onSuccess, onError, onClose }: TaskFormProps)
           id="description"
           name="description"
           rows={3}
+          defaultValue={taskToEdit?.description || ""}
           className={`w-full px-4 py-2.5 border rounded-xl text-sm text-gray-800 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-violet-400 transition-colors resize-none ${errors.description ? 'border-red-500' : 'border-gray-300'}`}
           placeholder="Describe los detalles de la tarea..."
         />
@@ -175,6 +194,8 @@ export default function TaskForm({ onSuccess, onError, onClose }: TaskFormProps)
           <select
             id="project_id"
             name="project_id"
+            value={selectedProjectId}
+            onChange={(e) => setSelectedProjectId(e.target.value)}
             disabled={loadingProjects}
             className={`w-full px-4 py-2.5 border rounded-xl text-sm text-gray-800 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-violet-400 transition-colors bg-white disabled:bg-gray-50 disabled:text-gray-400 ${errors.project_id ? 'border-red-500' : 'border-gray-300'}`}
           >
@@ -204,6 +225,7 @@ export default function TaskForm({ onSuccess, onError, onClose }: TaskFormProps)
           <select
             id="priority"
             name="priority"
+            defaultValue={taskToEdit?.priority || ""}
             className={`w-full px-4 py-2.5 border rounded-xl text-sm text-gray-800 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-violet-400 transition-colors bg-white ${errors.priority ? 'border-red-500' : 'border-gray-300'}`}
           >
             <option value="">Selecciona la prioridad...</option>
@@ -223,7 +245,8 @@ export default function TaskForm({ onSuccess, onError, onClose }: TaskFormProps)
             type="date"
             id="target_date"
             name="target_date"
-            min={today}
+            defaultValue={taskToEdit?.target_date || ""}
+            min={!taskToEdit ? today : undefined}
             className={`w-full px-4 py-2.5 border rounded-xl text-sm text-gray-800 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-violet-400 transition-colors ${errors.target_date ? 'border-red-500' : 'border-gray-300'}`}
           />
           {errors.target_date && <p className="text-red-500 text-xs mt-1">{errors.target_date}</p>}
@@ -244,7 +267,7 @@ export default function TaskForm({ onSuccess, onError, onClose }: TaskFormProps)
           disabled={loading || (projects.length === 0 && !loadingProjects)}
           className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-purple-500 text-white text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-60 flex items-center justify-center"
         >
-          {loading ? "Guardando..." : "Guardar"}
+          {loading ? "Guardando..." : (taskToEdit ? "Actualizar" : "Guardar")}
         </button>
       </div>
     </form>

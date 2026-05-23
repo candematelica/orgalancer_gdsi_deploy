@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Clock, Check, Circle, CheckCircle2, CircleDot, Calendar, User, LayoutList, FolderOpen } from "lucide-react";
+import { Clock, Check, Circle, CheckCircle, Calendar, LayoutList, FolderOpen } from "lucide-react";
 import SectionHeader from "./../_components/section_header"
 import TaskModal from "./_components/TaskModal";
 import TaskForm from "./_components/TaskForm";
@@ -21,6 +21,7 @@ interface Task {
 export default function TasksPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,9 +57,13 @@ export default function TasksPage() {
     fetchTasks();
   }, []);
 
-  const handleSuccess = () => {
+  const handleSuccess = (isEdit: boolean) => {
     setIsModalOpen(false);
-    setToast({ message: "Tarea creada exitosamente", type: "success" });
+    setTaskToEdit(null);
+    setToast({
+      message: isEdit ? "Tarea actualizada exitosamente" : "Tarea creada exitosamente",
+      type: "success"
+    });
     setTimeout(() => setToast(null), 3000);
     fetchTasks();
   };
@@ -66,6 +71,17 @@ export default function TasksPage() {
   const handleError = (msg: string) => {
     setToast({ message: msg, type: "error" });
     setTimeout(() => setToast(null), 3000);
+  };
+
+  const handleEditTask = (task: Task) => {
+    setSelectedTask(null);
+    setTaskToEdit(task);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setTaskToEdit(null);
   };
 
   const handleStatusCycle = async (task: Task, e: React.MouseEvent) => {
@@ -79,7 +95,7 @@ export default function TasksPage() {
 
     try {
       const token = localStorage.getItem("token");
-      await fetch(`/api/tasks/${task.id}`, {
+      await fetch(`/api/tasks/${task.id}/status`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -138,7 +154,7 @@ export default function TasksPage() {
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <SectionHeader title="Tareas" subtitle="Organiza y prioriza tu trabajo" icon={<Check className="w-8 h-8 text-indigo-600"/>}>
+      <SectionHeader title="Tareas" subtitle="Organiza y prioriza tu trabajo" icon={<Check className="w-8 h-8 text-indigo-600" />}>
         <button
           onClick={() => setIsModalOpen(true)}
           className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-purple-500 text-white text-sm font-semibold hover:opacity-90 transition-opacity shadow"
@@ -208,9 +224,9 @@ export default function TasksPage() {
                   title="Cambiar estado"
                 >
                   {task.status === "Completada" ? (
-                    <CheckCircle2 className="text-green-500" size={24} />
+                    <CheckCircle className="text-green-500" size={24} />
                   ) : task.status === "En Progreso" ? (
-                    <CircleDot className="text-yellow-500" size={24} />
+                    <Clock className="text-yellow-500" size={24} />
                   ) : (
                     <Circle className="text-gray-300" size={24} />
                   )}
@@ -248,8 +264,14 @@ export default function TasksPage() {
       )}
 
       {/* Modals */}
-      <TaskModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
-        <TaskForm onSuccess={handleSuccess} onError={handleError} onClose={() => setIsModalOpen(false)} />
+      <TaskModal isOpen={isModalOpen} onClose={handleCloseModal}>
+        <TaskForm
+          key={taskToEdit ? taskToEdit.id : "new-task"}
+          taskToEdit={taskToEdit}
+          onSuccess={handleSuccess}
+          onError={handleError}
+          onClose={handleCloseModal}
+        />
       </TaskModal>
 
       {selectedTask && (
@@ -257,6 +279,7 @@ export default function TasksPage() {
           task={selectedTask}
           onClose={() => setSelectedTask(null)}
           onDelete={handleDeleteTask}
+          onEdit={handleEditTask}
         />
       )}
 
