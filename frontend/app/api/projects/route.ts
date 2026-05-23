@@ -14,7 +14,6 @@ export async function GET(req: NextRequest) {
         "Content-Type": "application/json",
         Authorization: token ? `Bearer ${token}` : ""
       },
-      credentials: "include",
       cache: "no-store",
     });
 
