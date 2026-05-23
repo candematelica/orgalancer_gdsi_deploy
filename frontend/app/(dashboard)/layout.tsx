@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "./_components/sidebar";
+import { TimerProvider } from "./_lib/TimerContext";
+import FloatingTimerWidgetGlobal from "./_components/FloatingTimerWidgetGlobal";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -20,11 +22,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   if (!authorized) return null;
 
   return (
-    <div className="flex h-screen overflow-hidden bg-white">
-      <Sidebar />
-      <main className="flex-1 overflow-y-auto p-8">
-        {children}
-      </main>
-    </div>
+    <TimerProvider>
+      <div className="flex h-screen overflow-hidden bg-white">
+        <Sidebar />
+        <main className="flex-1 overflow-y-auto p-8">
+          {children}
+        </main>
+        <FloatingTimerWidgetGlobal />
+      </div>
+    </TimerProvider>
   );
 }
