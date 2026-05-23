@@ -49,9 +49,17 @@ def get_tasks(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    tasks = db.query(Task).filter(Task.user_id == current_user.id).all()
+    tasks = (
+        db.query(Task)
+        .options(joinedload(Task.project))
+        .filter(Task.user_id == current_user.id)
+        .all()
+    )
+    for task in tasks:
+        task.project_name = task.project.name if task.project else None
     return tasks
 
+    
 @router.patch("/{task_id}/status", response_model=TaskResponse)
 def update_task_status(
     task_id: str,

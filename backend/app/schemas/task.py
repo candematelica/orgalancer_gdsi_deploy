@@ -18,6 +18,7 @@ class TaskResponse(TaskBase):
     status: TaskStatus
     created_at: str
     updated_at: str
+    project_name: str | None = None
 
     class Config:
         from_attributes = True
