@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, Float, ForeignKey, Date, Numeric
+from sqlalchemy import Column, String, Float, ForeignKey, Date, Numeric, DateTime
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import relationship
 from app.database import Base
@@ -22,6 +22,8 @@ class User(Base):
     financial_config = relationship("FinancialConfiguration", back_populates="user", uselist=False)
     
     projects = relationship("Project", back_populates="user", cascade="all, delete-orphan")
+
+    time_entries = relationship("TimeEntry", back_populates="user", cascade="all, delete-orphan")
 
 class FinancialConfiguration(Base):
     __tablename__ = "financial_configurations"
@@ -81,6 +83,7 @@ class Project(Base):
     user = relationship("User", back_populates="projects")
     client = relationship("Client", back_populates="projects")
     tasks = relationship("Task", back_populates="project", cascade="all, delete-orphan")
+    time_entries = relationship("TimeEntry", back_populates="project", cascade="all, delete-orphan")
 
 class TaskStatus(str, enum.Enum):
     pending = "Pendiente"
@@ -103,3 +106,24 @@ class Task(Base):
 
     user = relationship("User")
     project = relationship("Project", back_populates="tasks")
+    time_entries = relationship("TimeEntry", back_populates="task", cascade="all, delete-orphan")
+
+class TimeSource(enum.Enum):
+    manual = "manual"
+    timer = "timer"
+
+class TimeEntry(Base):
+    __tablename__ = "time_entries"
+    id               = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id          = Column(String, ForeignKey("users.id"), nullable=False)
+    project_id       = Column(String, ForeignKey("projects.id"), nullable=False)
+    task_id          = Column(String, ForeignKey("tasks.id"), nullable=True)
+    entry_date       = Column(Date, nullable=False)
+    duration_minutes = Column(Numeric(10, 2), nullable=False)
+    description      = Column(String, nullable=True)
+    source           = Column(SQLEnum(TimeSource), default=TimeSource.manual)
+    created_at       = Column(DateTime, nullable=False)
+
+    user    = relationship("User", back_populates="time_entries")
+    project = relationship("Project", back_populates="time_entries")
+    task    = relationship("Task", back_populates="time_entries", foreign_keys=[task_id])
