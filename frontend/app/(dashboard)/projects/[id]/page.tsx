@@ -11,6 +11,7 @@ import DetailTabs, { DetailTab } from "./_components/detail_tabs";
 import OverviewTab   from "./_components/tabs/overview_tab";
 import BudgetsTab    from "./_components/tabs/budgets_tab";
 import TasksTab      from "./_components/tabs/tasks_tab";
+import TimesTab      from "./_components/tabs/times_tab";
 import DocumentsTab  from "./_components/tabs/documents_tab";
 import NotesTab      from "./_components/tabs/notes_tab";
 
@@ -21,6 +22,7 @@ export default function ProjectDetailPage() {
   const { project, loading, error, refetch } = useProjectDetail(id);
   const [activeTab, setActiveTab] = useState<DetailTab>("overview");
   const [editOpen, setEditOpen] = useState(false);
+  const [timeRefreshKey, setTimeRefreshKey] = useState(0);
 
   // ── handlers ──────────────────────────────────────────────────
   const handleEditClick = () => setEditOpen(true);
@@ -67,6 +69,7 @@ export default function ProjectDetailPage() {
       case "overview":   return <OverviewTab  project={project} />;
       case "budgets":    return <BudgetsTab   projectId={project.id} />;
       case "tasks":      return <TasksTab     projectId={project.id} onTaskChange={refetch} />;
+      case "tiempos":    return <TimesTab     projectId={project.id} refreshKey={timeRefreshKey} />;
       case "documents":  return <DocumentsTab projectId={project.id} />;
       case "notes":      return <NotesTab     projectId={project.id} />;
       default:           return null;

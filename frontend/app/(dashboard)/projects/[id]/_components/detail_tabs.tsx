@@ -1,6 +1,6 @@
 "use client";
 
-export type DetailTab = "overview" | "budgets" | "tasks" | "documents" | "notes";
+export type DetailTab = "overview" | "budgets" | "tasks" | "documents" | "notes" | "tiempos";
 
 interface TabConfig {
   key: DetailTab;
@@ -19,6 +19,7 @@ export default function DetailTabs({ activeTab, onChange, taskCount }: Props) {
     { key: "overview",   label: "Vista General" },
     { key: "budgets",    label: "Presupuestos" },
     { key: "tasks",      label: "Tareas", count: taskCount },
+    { key: "tiempos",    label: "Tiempos" },
     { key: "documents",  label: "Documentos" },
     { key: "notes",      label: "Notas" },
   ];
