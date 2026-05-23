@@ -42,12 +42,9 @@ export default function TasksPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem("token");
-      if (!token) return;
-
       const [tasksRes, projectsRes] = await Promise.all([
-        fetch("/api/tasks", { headers: { "Authorization": `Bearer ${token}` } }),
-        fetch("/api/projects?state=active", { headers: { "Authorization": `Bearer ${token}` } })
+        fetch("/api/tasks"),
+        fetch("/api/projects?state=active")
       ]);
 
       if (tasksRes.ok) {
@@ -108,12 +105,10 @@ export default function TasksPage() {
     setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: nextStatus } : t));
 
     try {
-      const token = localStorage.getItem("token");
       await fetch(`/api/tasks/${task.id}/status`, {
         method: "PATCH",
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({ status: nextStatus })
       });
@@ -127,11 +122,8 @@ export default function TasksPage() {
 
   const handleDeleteTask = async (taskId: string) => {
     try {
-      const token = localStorage.getItem("token");
-
       const res = await fetch(`/api/tasks/${taskId}`, {
-        method: "DELETE",
-        headers: { "Authorization": `Bearer ${token}` }
+        method: "DELETE"
       });
 
       if (!res.ok) {

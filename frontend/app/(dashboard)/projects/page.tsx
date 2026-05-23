@@ -21,10 +21,10 @@ export default function ProjectsPage() {
   const [editingProject, setEditingProject] = useState<EnrichedProject | null>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
     const userRaw = localStorage.getItem("user");
+    console.log("USERRAW: ", userRaw)
 
-    if (!token || !userRaw) {
+    if (!userRaw) {
       router.push("/login");
       return;
     }
@@ -48,14 +48,14 @@ export default function ProjectsPage() {
 
   // form logic (post) ---
   const [showForm, setShowForm] = useState(false);
-  const { 
-    formData, 
-    setFormData, 
-    handleSubmit, 
-    error: formError, 
-    saved, 
-    loading: formLoading, 
-    clients 
+  const {
+    formData,
+    setFormData,
+    handleSubmit,
+    error: formError,
+    saved,
+    loading: formLoading,
+    clients
   } = useCreateProjectForm();
 
   async function onSubmit(e: React.FormEvent) {
@@ -79,14 +79,14 @@ export default function ProjectsPage() {
   }
 
   return (
-    <> 
+    <>
       <EditProjectPanel
         project={editingProject}
         onClose={() => setEditingProject(null)}
         onSaved={() => { actions.reload(); actions.reloadStats(); }}
       />
-      { /* header */ }
-      <SectionHeader title="Proyectos" subtitle="Gestioná todos tus proyectos freelance" icon={<Briefcase className="w-8 h-8 text-indigo-600"/>}>
+      { /* header */}
+      <SectionHeader title="Proyectos" subtitle="Gestioná todos tus proyectos freelance" icon={<Briefcase className="w-8 h-8 text-indigo-600" />}>
         <button
           onClick={() => setShowForm((prev) => !prev)}
           className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:shadow-lg hover:scale-[1.02] transition-all font-medium shadow-sm"
@@ -220,7 +220,7 @@ export default function ProjectsPage() {
         activeFilter={state.activeFilter}
         currency="€"
         onEdit={(project) => setEditingProject(project)}
-        onStateChange={() => { actions.reload(); actions.reloadStats(); }} 
+        onStateChange={() => { actions.reload(); actions.reloadStats(); }}
       />
     </>
   );

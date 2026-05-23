@@ -3,10 +3,12 @@ import { parseBody, extractErrorMsg } from "../utils";
 
 export async function GET(req: NextRequest) {
   try {
-    const token = req.headers.get("Authorization");
+    const token = req.cookies.get("token")?.value
 
     const response = await fetch(`${process.env.API_URL}/clients`, {
-      headers: { "Authorization": token || "" },
+      headers: {
+        Authorization: token ? `Bearer ${token}` : ""
+      },
       cache: "no-store",
     });
 
@@ -24,12 +26,15 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const token = req.headers.get("Authorization");
+    const token = req.cookies.get("token")?.value
     const body = await req.json();
 
     const response = await fetch(`${process.env.API_URL}/clients`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": token || "" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: token ? `Bearer ${token}` : ""
+      },
       body: JSON.stringify(body),
     });
 

@@ -67,8 +67,6 @@ export default function NewClientModal({ onClose, onSuccess, clientToEdit }: Pro
 
         setLoading(true);
         try {
-            const token = localStorage.getItem("token");
-
             const url = isEditMode
                 ? `/api/clients/${clientToEdit!.id}`
                 : "/api/clients";
@@ -77,8 +75,7 @@ export default function NewClientModal({ onClose, onSuccess, clientToEdit }: Pro
             const res = await fetch(url, {
                 method,
                 headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`,
+                    "Content-Type": "application/json"
                 },
                 body: JSON.stringify(form),
             });
