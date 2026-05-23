@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Clock, Check, Circle, CheckCircle, Calendar, LayoutList, FolderOpen } from "lucide-react";
+import { Clock, Check, Circle, CheckCircle, Calendar, LayoutList, FolderOpen, SlidersHorizontal } from "lucide-react";
 import SectionHeader from "./../_components/section_header"
 import TaskModal from "./_components/TaskModal";
 import TaskForm from "./_components/TaskForm";
@@ -18,43 +18,57 @@ interface Task {
   status: string;
 }
 
+interface Project {
+  id: string;
+  name: string;
+}
+
 export default function TasksPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState("Todas");
 
-  const filters = ["Todas", "Pendientes", "En Progreso", "Completadas"];
+  const [statusFilter, setStatusFilter] = useState("Todas");
+  const [projectFilter, setProjectFilter] = useState("Todos");
+  const [priorityFilter, setPriorityFilter] = useState("Todas");
 
-  const fetchTasks = async () => {
+  const statusOptions = ["Todas", "Pendientes", "En Progreso", "Completadas"];
+  const priorityOptions = ["Todas", "Baja", "Media", "Alta", "Urgente"];
+
+  const fetchData = async () => {
+    setLoading(true);
     try {
       const token = localStorage.getItem("token");
       if (!token) return;
 
-      const res = await fetch("/api/tasks", {
-        headers: {
-          "Authorization": `Bearer ${token}`
-        }
-      });
+      const [tasksRes, projectsRes] = await Promise.all([
+        fetch("/api/tasks", { headers: { "Authorization": `Bearer ${token}` } }),
+        fetch("/api/projects?state=active", { headers: { "Authorization": `Bearer ${token}` } })
+      ]);
 
-      const data = await res.json();
-      if (res.ok) {
-        setTasks(data);
+      if (tasksRes.ok) {
+        const tasksData = await tasksRes.json();
+        setTasks(tasksData);
+      }
+
+      if (projectsRes.ok) {
+        const projectsData = await projectsRes.json();
+        setProjects(projectsData.map((p: any) => ({ id: p.id, name: p.name })));
       }
 
     } catch (error) {
-      console.error("Error fetching tasks:", error);
-
+      console.error("Error fetching data:", error);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchTasks();
+    fetchData();
   }, []);
 
   const handleSuccess = (isEdit: boolean) => {
@@ -65,7 +79,7 @@ export default function TasksPage() {
       type: "success"
     });
     setTimeout(() => setToast(null), 3000);
-    fetchTasks();
+    fetchData();
   };
 
   const handleError = (msg: string) => {
@@ -106,8 +120,7 @@ export default function TasksPage() {
 
     } catch (error) {
       console.error("Error updating status:", error);
-
-      fetchTasks();
+      fetchData();
       handleError("Error al actualizar el estado");
     }
   };
@@ -129,7 +142,7 @@ export default function TasksPage() {
       setToast({ message: "Tarea eliminada exitosamente", type: "success" });
       setTimeout(() => setToast(null), 3000);
       setSelectedTask(null);
-      fetchTasks();
+      fetchData();
 
     } catch (error: any) {
       handleError(error.message || "Error al eliminar la tarea");
@@ -144,11 +157,16 @@ export default function TasksPage() {
   };
 
   const filteredTasks = tasks.filter(task => {
-    if (filter === "Todas") return true;
-    if (filter === "Pendientes") return task.status === "Pendiente";
-    if (filter === "En Progreso") return task.status === "En Progreso";
-    if (filter === "Completadas") return task.status === "Completada";
-    return true;
+    let matchStatus = true;
+    if (statusFilter === "Pendientes") matchStatus = task.status === "Pendiente";
+    else if (statusFilter === "En Progreso") matchStatus = task.status === "En Progreso";
+    else if (statusFilter === "Completadas") matchStatus = task.status === "Completada";
+
+    const matchProject = projectFilter === "Todos" || task.project_id === projectFilter;
+
+    const matchPriority = priorityFilter === "Todas" || task.priority === priorityFilter;
+
+    return matchStatus && matchProject && matchPriority;
   });
 
   return (
@@ -164,26 +182,61 @@ export default function TasksPage() {
         </button>
       </SectionHeader>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-2 mb-6">
-        {filters.map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`px-4 py-1.5 rounded-full text-sm transition-colors border ${filter === f
-              ? "bg-violet-100 text-violet-700 font-semibold border-transparent shadow-sm"
-              : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50 hover:text-violet-600 shadow-sm"
-              }`}
+      {/* Panel de Filtros Avanzados */}
+      <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4 mb-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4 shadow-sm">
+        {/* Filtro por Estado */}
+        <div className="flex flex-wrap gap-1.5">
+          {statusOptions.map((f) => (
+            <button
+              key={f}
+              onClick={() => setStatusFilter(f)}
+              className={`px-4 py-1.5 rounded-xl text-sm transition-all ${statusFilter === f
+                ? "bg-white text-violet-700 font-semibold shadow border border-violet-100"
+                : "text-gray-500 hover:bg-white hover:text-gray-800"
+                }`}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+
+        {/* Filtros por Proyecto y Prioridad */}
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-3">
+          <div className="flex items-center gap-2 text-gray-400 text-xs font-medium uppercase tracking-wider mr-1">
+            <SlidersHorizontal size={14} />
+            <span>Filtros:</span>
+          </div>
+
+          {/* Selector de Proyectos */}
+          <select
+            value={projectFilter}
+            onChange={(e) => setProjectFilter(e.target.value)}
+            className="px-3 py-1.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-violet-400 cursor-pointer min-w-[140px]"
           >
-            {f}
-          </button>
-        ))}
+            <option value="Todos">Todos los Proyectos</option>
+            {projects.map(p => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+
+          {/* Selector de Prioridades */}
+          <select
+            value={priorityFilter}
+            onChange={(e) => setPriorityFilter(e.target.value)}
+            className="px-3 py-1.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-violet-400 cursor-pointer min-w-[140px]"
+          >
+            <option value="Todas">Todas las Prioridades</option>
+            {priorityOptions.filter(o => o !== "Todas").map(o => (
+              <option key={o} value={o}>{o}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Contenido */}
       {loading ? (
         <div className="flex-1 flex items-center justify-center">
-          <p className="text-sm text-gray-400">Cargando tareas...</p>
+          <p className="text-sm text-gray-400 animate-pulse">Cargando tus tareas...</p>
         </div>
       ) : filteredTasks.length === 0 ? (
         <div className="flex-1 flex items-center justify-center mt-6">
@@ -204,8 +257,9 @@ export default function TasksPage() {
               </button>
             </div>
           ) : (
-            <div className="text-center text-gray-400">
-              <p>No hay tareas que coincidan con "{filter}"</p>
+            <div className="text-center bg-gray-50 border border-gray-100 rounded-2xl p-8 text-gray-400 max-w-sm mx-auto">
+              <p className="font-medium text-gray-600 mb-1">Sin resultados</p>
+              <p className="text-xs">No hay tareas que coincidan con los criterios seleccionados.</p>
             </div>
           )}
         </div>
