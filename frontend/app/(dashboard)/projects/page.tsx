@@ -12,13 +12,16 @@ import StatsHeader from "./_components/stats_header";
 import ProjectFilters from "./_components/project_filters";
 import ProjectsGrid from "./_components/projects_grid";
 import EditProjectPanel from "./_components/edit_project_panel";
+import { useTimerContext } from "../_lib/TimerContext";
 
 export default function ProjectsPage() {
   const router = useRouter();
+  const { setTask: setTimerProject, setIsOpen: setTimerOpen } = useTimerContext();
 
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [editingProject, setEditingProject] = useState<EnrichedProject | null>(null);
+  const [timeRefreshKey, setTimeRefreshKey] = useState(0);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -220,7 +223,15 @@ export default function ProjectsPage() {
         activeFilter={state.activeFilter}
         currency="€"
         onEdit={(project) => setEditingProject(project)}
-        onStateChange={() => { actions.reload(); actions.reloadStats(); }} 
+        onStateChange={() => { actions.reload(); actions.reloadStats(); }}
+        onStartTimer={(project) => {
+          setTimerProject({
+            id: project.id,
+            title: project.name,
+            project_id: project.id,
+          });
+          setTimerOpen(true);
+        }}
       />
     </>
   );

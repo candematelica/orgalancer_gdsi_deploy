@@ -1,4 +1,4 @@
-import { User, Calendar, Pencil } from "lucide-react";
+import { User, Calendar, Pencil, Clock } from "lucide-react";
 import Link from "next/link";
 import { EnrichedProject } from "../_hooks/use_projects";
 import ProgressBar from "./progress_bar";
@@ -10,7 +10,8 @@ interface ProjectCardProps {
   project: EnrichedProject;
   currency?: string;
   onEdit: (project: EnrichedProject) => void;
-  onStateChange?: () => void; 
+  onStateChange?: () => void;
+  onStartTimer?: (project: EnrichedProject) => void;
 }
 
 function formatCurrency(value: number, currency = "€") {
@@ -28,6 +29,7 @@ export default function ProjectCard({
   currency = "€",
   onEdit,
   onStateChange,
+  onStartTimer,
 }: ProjectCardProps) {
 
   const [currentState, setCurrentState] = useState(project.state); 
@@ -71,15 +73,26 @@ export default function ProjectCard({
               </svg>
             </span>
           </div>
-          <div className="flex items-center gap-2"> 
+          <div className="flex items-center gap-2">
              {currentState === "active" && (
+            <>
+            <button
+              onClick={() => onStartTimer?.(project)}
+              className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs text-blue-500 hover:bg-blue-50 transition-colors"
+              title="Registrar tiempo"
+            >
+              <Clock className="w-3 h-3" />
+              Tiempo
+            </button>
             <button
               onClick={() => onEdit(project)}
               className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs text-gray-500 hover:bg-gray-100 transition-colors"
             >
               <Pencil className="w-3 h-3" />
               Editar
-            </button>)}
+            </button>
+            </>
+            )}
             <StatusBadge status={currentState} />
           </div>
         </div>
