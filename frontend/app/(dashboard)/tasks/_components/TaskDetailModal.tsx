@@ -18,10 +18,19 @@ interface Props {
   task: Task;
   onClose: () => void;
   onDelete: (taskId: string) => void;
+  onStatusChange: (taskId: string, newStatus: string) => void;
+  onPriorityChange: (taskId: string, newPriority: string) => void;
 }
 
-export default function TaskDetailModal({ task, onClose, onDelete }: Props) {
+const STATUSES = ["Pendiente", "En Progreso", "Bloqueada", "Completada"] as const;
+const PRIORITIES = ["Baja", "Media", "Alta", "Urgente"] as const;
+
+export default function TaskDetailModal({ task, onClose, onDelete, onStatusChange, onPriorityChange }: Props) {
   const [isDeleting, setIsDeleting] = useState(false);
+  const [currentStatus, setCurrentStatus] = useState(task.status);
+  const [currentPriority, setCurrentPriority] = useState(task.priority);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [updatingPriority, setUpdatingPriority] = useState(false);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -40,6 +49,48 @@ export default function TaskDetailModal({ task, onClose, onDelete }: Props) {
     setIsDeleting(false);
   };
 
+  const handleStatusChange = async (newStatus: string) => {
+    if (newStatus === currentStatus || updatingStatus) return;
+    const prev = currentStatus;
+    setCurrentStatus(newStatus);
+    setUpdatingStatus(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`/api/tasks/${task.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (!res.ok) throw new Error();
+      onStatusChange(task.id, newStatus);
+    } catch {
+      setCurrentStatus(prev);
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  const handlePriorityChange = async (newPriority: string) => {
+    if (newPriority === currentPriority || updatingPriority) return;
+    const prev = currentPriority;
+    setCurrentPriority(newPriority);
+    setUpdatingPriority(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`/api/tasks/${task.id}/priority`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify({ priority: newPriority }),
+      });
+      if (!res.ok) throw new Error();
+      onPriorityChange(task.id, newPriority);
+    } catch {
+      setCurrentPriority(prev);
+    } finally {
+      setUpdatingPriority(false);
+    }
+  };
+
   const priorityColors: Record<string, string> = {
     Baja: "bg-green-100 text-green-700",
     Media: "bg-yellow-100 text-yellow-700",
@@ -50,7 +101,22 @@ export default function TaskDetailModal({ task, onClose, onDelete }: Props) {
   const statusColors: Record<string, string> = {
     "Pendiente": "text-gray-500 bg-gray-100",
     "En Progreso": "text-yellow-700 bg-yellow-100",
+    "Bloqueada": "text-orange-700 bg-orange-100",
     "Completada": "text-green-700 bg-green-100",
+  };
+
+  const statusButtonColors: Record<string, string> = {
+    "Pendiente": "border-gray-400 bg-gray-100 text-gray-700",
+    "En Progreso": "border-yellow-400 bg-yellow-100 text-yellow-700",
+    "Bloqueada": "border-orange-400 bg-orange-100 text-orange-700",
+    "Completada": "border-green-400 bg-green-100 text-green-700",
+  };
+
+  const priorityButtonColors: Record<string, string> = {
+    Baja: "border-green-300 bg-green-50 text-green-700",
+    Media: "border-yellow-300 bg-yellow-50 text-yellow-700",
+    Alta: "border-red-300 bg-red-50 text-red-700",
+    Urgente: "border-red-400 bg-red-100 text-red-800",
   };
 
   return (
@@ -63,11 +129,11 @@ export default function TaskDetailModal({ task, onClose, onDelete }: Props) {
         <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[task.status]}`}>
-                {task.status}
+              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[currentStatus]}`}>
+                {currentStatus}
               </span>
-              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${priorityColors[task.priority]}`}>
-                {task.priority}
+              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${priorityColors[currentPriority]}`}>
+                {currentPriority}
               </span>
             </div>
             <h2 className="text-xl font-bold text-gray-800 leading-tight pr-4">
@@ -114,6 +180,46 @@ export default function TaskDetailModal({ task, onClose, onDelete }: Props) {
                 <p className="text-xs font-medium text-gray-400">Proyecto Asignado</p>
                 <p className="text-sm font-semibold text-gray-800 mt-0.5">{task.project_name || "Sin proyecto"}</p>
               </div>
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Estado</h3>
+            <div className="grid grid-cols-4 gap-2">
+              {STATUSES.map(s => (
+                <button
+                  key={s}
+                  onClick={() => handleStatusChange(s)}
+                  disabled={updatingStatus}
+                  className={`py-2 px-1 rounded-xl text-xs font-semibold border-2 transition-all text-center ${
+                    currentStatus === s
+                      ? statusButtonColors[s]
+                      : "border-gray-200 bg-white text-gray-400 hover:border-gray-300"
+                  }`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Prioridad</h3>
+            <div className="grid grid-cols-4 gap-2">
+              {PRIORITIES.map(p => (
+                <button
+                  key={p}
+                  onClick={() => handlePriorityChange(p)}
+                  disabled={updatingPriority}
+                  className={`py-2 px-1 rounded-xl text-xs font-semibold border-2 transition-all text-center ${
+                    currentPriority === p
+                      ? priorityButtonColors[p]
+                      : "border-gray-200 bg-white text-gray-400 hover:border-gray-300"
+                  }`}
+                >
+                  {p}
+                </button>
+              ))}
             </div>
           </div>
         </div>

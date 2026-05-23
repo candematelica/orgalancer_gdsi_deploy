@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Clock, Check, Circle, CheckCircle2, CircleDot, Calendar, User, LayoutList, FolderOpen } from "lucide-react";
+import { Plus, Clock, Check, Circle, CheckCircle2, CircleDot, AlertOctagon, Calendar, User, LayoutList, FolderOpen } from "lucide-react";
 import SectionHeader from "./../_components/section_header"
 import TaskModal from "./_components/TaskModal";
 import TaskForm from "./_components/TaskForm";
@@ -26,7 +26,7 @@ export default function TasksPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("Todas");
 
-  const filters = ["Todas", "Pendientes", "En Progreso", "Completadas"];
+  const filters = ["Todas", "Pendientes", "En Progreso", "Bloqueadas", "Completadas"];
 
   const fetchTasks = async () => {
     try {
@@ -71,7 +71,7 @@ export default function TasksPage() {
   const handleStatusCycle = async (task: Task, e: React.MouseEvent) => {
     e.stopPropagation();
 
-    const statusOrder = ["Pendiente", "En Progreso", "Completada"];
+    const statusOrder = ["Pendiente", "En Progreso", "Bloqueada", "Completada"];
     const currentIndex = statusOrder.indexOf(task.status);
     const nextStatus = statusOrder[(currentIndex + 1) % statusOrder.length];
 
@@ -120,6 +120,14 @@ export default function TasksPage() {
     }
   };
 
+  const handleStatusChange = (taskId: string, newStatus: string) => {
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
+  };
+
+  const handlePriorityChange = (taskId: string, newPriority: string) => {
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, priority: newPriority } : t));
+  };
+
   const priorityColors: Record<string, string> = {
     Baja: "bg-green-100 text-green-700",
     Media: "bg-yellow-100 text-yellow-700",
@@ -131,6 +139,7 @@ export default function TasksPage() {
     if (filter === "Todas") return true;
     if (filter === "Pendientes") return task.status === "Pendiente";
     if (filter === "En Progreso") return task.status === "En Progreso";
+    if (filter === "Bloqueadas") return task.status === "Bloqueada";
     if (filter === "Completadas") return task.status === "Completada";
     return true;
   });
@@ -211,6 +220,8 @@ export default function TasksPage() {
                     <CheckCircle2 className="text-green-500" size={24} />
                   ) : task.status === "En Progreso" ? (
                     <CircleDot className="text-yellow-500" size={24} />
+                  ) : task.status === "Bloqueada" ? (
+                    <AlertOctagon className="text-orange-400" size={24} />
                   ) : (
                     <Circle className="text-gray-300" size={24} />
                   )}
@@ -257,6 +268,8 @@ export default function TasksPage() {
           task={selectedTask}
           onClose={() => setSelectedTask(null)}
           onDelete={handleDeleteTask}
+          onStatusChange={handleStatusChange}
+          onPriorityChange={handlePriorityChange}
         />
       )}
 
