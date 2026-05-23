@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, Float, ForeignKey, Date, Numeric
+from sqlalchemy import Column, String, Float, ForeignKey, Date, Numeric, Table
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import relationship
 from app.database import Base
@@ -87,6 +87,22 @@ class TaskStatus(str, enum.Enum):
     in_progress = "En Progreso"
     completed = "Completada"
 
+task_tags = Table(
+    "task_tags",
+    Base.metadata,
+    Column("task_id", String, ForeignKey("tasks.id", ondelete="CASCADE"), primary_key=True),
+    Column("tag_id", String, ForeignKey("tags.id", ondelete="CASCADE"), primary_key=True),
+)
+
+class Tag(Base):
+    __tablename__ = "tags"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    name = Column(String(50), nullable=False)
+
+    tasks = relationship("Task", secondary=task_tags, back_populates="tags")
+    
 class Task(Base):
     __tablename__ = "tasks"
 
@@ -100,6 +116,6 @@ class Task(Base):
     status = Column(SQLEnum(TaskStatus), default=TaskStatus.pending, nullable=False)
     created_at = Column(String, nullable=False)
     updated_at = Column(String, nullable=False)
-
+    tags = relationship("Tag", secondary=task_tags, back_populates="tags")
     user = relationship("User")
     project = relationship("Project", back_populates="tasks")
