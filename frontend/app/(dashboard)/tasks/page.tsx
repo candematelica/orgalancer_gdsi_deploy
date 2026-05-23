@@ -6,6 +6,8 @@ import SectionHeader from "./../_components/section_header"
 import TaskModal from "./_components/TaskModal";
 import TaskForm from "./_components/TaskForm";
 import TaskDetailModal from "./_components/TaskDetailModal";
+import { useTimerContext } from "../_lib/TimerContext";
+import { API_BASE } from "./_lib/api";
 
 interface Task {
   id: string;
@@ -19,12 +21,14 @@ interface Task {
 }
 
 export default function TasksPage() {
+  const { setTask: setTimerTask, setIsOpen: setTimerOpen } = useTimerContext();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("Todas");
+  const [timeRefreshKey, setTimeRefreshKey] = useState(0);
 
   const filters = ["Todas", "Pendientes", "En Progreso", "Completadas"];
 
@@ -33,7 +37,7 @@ export default function TasksPage() {
       const token = localStorage.getItem("token");
       if (!token) return;
 
-      const res = await fetch("/api/tasks", {
+      const res = await fetch(`${API_BASE}/tasks`, {
         headers: {
           "Authorization": `Bearer ${token}`
         }
@@ -79,7 +83,9 @@ export default function TasksPage() {
 
     try {
       const token = localStorage.getItem("token");
-      await fetch(`/api/tasks/${task.id}`, {
+      const url = `${API_BASE}/tasks/${task.id}`;
+      console.log("DELETE →", url);
+      await fetch(`${API_BASE}/tasks/${task.id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -100,7 +106,7 @@ export default function TasksPage() {
     try {
       const token = localStorage.getItem("token");
 
-      const res = await fetch(`/api/tasks/${taskId}`, {
+      const res = await fetch(`${API_BASE}/tasks/${taskId}`, {
         method: "DELETE",
         headers: { "Authorization": `Bearer ${token}` }
       });
@@ -198,7 +204,9 @@ export default function TasksPage() {
           {filteredTasks.map((task) => (
             <div
               key={task.id}
-              onClick={() => setSelectedTask(task)}
+              onClick={() => {
+                setSelectedTask(task);
+              }}
               className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md hover:bg-violet-50/30 transition-all cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4 group"
             >
               <div className="flex items-start gap-4 flex-1">
@@ -235,7 +243,22 @@ export default function TasksPage() {
                 </div>
               </div>
 
-              <div className="flex items-center ml-10 sm:ml-0">
+              <div className="flex items-center gap-2 ml-10 sm:ml-0">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setTimerTask({
+                      id: task.id,
+                      title: task.title,
+                      project_id: task.project_id,
+                    });
+                    setTimerOpen(true);
+                  }}
+                  className="p-2 rounded-lg hover:bg-purple-100 text-purple-500 hover:text-purple-600 transition-colors opacity-0 group-hover:opacity-100"
+                  title="Registrar tiempo"
+                >
+                  <Clock className="w-5 h-5" />
+                </button>
                 <div className="w-8 flex justify-end opacity-0 group-hover:opacity-100 transition-opacity text-gray-400">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M5 12h14M12 5l7 7-7 7" />
@@ -257,6 +280,7 @@ export default function TasksPage() {
           task={selectedTask}
           onClose={() => setSelectedTask(null)}
           onDelete={handleDeleteTask}
+          timeRefreshKey={timeRefreshKey}
         />
       )}
 
