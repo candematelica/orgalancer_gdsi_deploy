@@ -1,7 +1,7 @@
 export const NAV_ITEMS = [
   {
-    label: "Dashboard",
     href: "/dashboard",
+    label: "Dashboard",
     icon: (
       <svg width="18" height="18" fill="none" viewBox="0 0 24 24">
         <rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
@@ -70,6 +70,17 @@ export const NAV_ITEMS = [
       <svg width="18" height="18" fill="none" viewBox="0 0 24 24">
         <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.5" />
         <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+  {
+    href: "/notifications",
+    label: "Notificaciones",
+    showBadge: true,
+    icon: (
+      <svg width="18" height="18" fill="none" viewBox="0 0 24 24">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M13.73 21a2 2 0 0 1-3.46 0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
       </svg>
     ),
   },
