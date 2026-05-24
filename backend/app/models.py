@@ -101,7 +101,7 @@ class Tag(Base):
     user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
     name = Column(String(50), nullable=False)
 
-    tasks = relationship("Task", secondary=task_tags, back_populates="tags")
+    tasks = relationship("Task", secondary=task_tags, back_populates="tasks")
     
 class Task(Base):
     __tablename__ = "tasks"
