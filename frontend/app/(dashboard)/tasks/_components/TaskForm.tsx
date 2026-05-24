@@ -1,8 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Plus, X, Tag } from "lucide-react";
 
 interface Project {
+  id: string;
+  name: string;
+}
+
+interface TagItem {
   id: string;
   name: string;
 }
@@ -18,6 +24,12 @@ export default function TaskForm({ onSuccess, onError, onClose }: TaskFormProps)
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [projects, setProjects] = useState<Project[]>([]);
   const [loadingProjects, setLoadingProjects] = useState(true);
+
+  const [availableTags, setAvailableTags] = useState<TagItem[]>([]);
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const [showTagInput, setShowTagInput] = useState(false);
+  const [newTagName, setNewTagName] = useState("");
+  const [creatingTag, setCreatingTag] = useState(false);
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -40,7 +52,21 @@ export default function TaskForm({ onSuccess, onError, onClose }: TaskFormProps)
       }
     };
 
+    const fetchTags = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) return;
+        const res = await fetch("/api/tasks/tags", {
+          headers: { "Authorization": `Bearer ${token}` },
+        });
+        if (res.ok) setAvailableTags(await res.json());
+      } catch (error) {
+        console.error("Error fetching tags:", error);
+      }
+    };
+
     fetchProjects();
+    fetchTags();
   }, []);
 
   const validate = (formData: FormData) => {
@@ -104,6 +130,7 @@ export default function TaskForm({ onSuccess, onError, onClose }: TaskFormProps)
         project_id: formData.get("project_id"),
         priority: formData.get("priority"),
         target_date: formData.get("target_date"),
+        tag_ids: selectedTagIds,
       };
 
       const token = localStorage.getItem("token");
@@ -132,6 +159,36 @@ export default function TaskForm({ onSuccess, onError, onClose }: TaskFormProps)
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCreateTag = async () => {
+    const name = newTagName.trim();
+    if (!name) return;
+    setCreatingTag(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch("/api/tasks/tags", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify({ name }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Error al crear etiqueta");
+      setAvailableTags(prev => [...prev, data]);
+      setSelectedTagIds(prev => [...prev, data.id]);
+      setNewTagName("");
+      setShowTagInput(false);
+    } catch (err: any) {
+      onError(err.message);
+    } finally {
+      setCreatingTag(false);
+    }
+  };
+
+  const toggleTag = (id: string) => {
+    setSelectedTagIds(prev =>
+      prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id]
+    );
   };
 
   const today = new Date().toISOString().split('T')[0];
@@ -228,6 +285,74 @@ export default function TaskForm({ onSuccess, onError, onClose }: TaskFormProps)
           />
           {errors.target_date && <p className="text-red-500 text-xs mt-1">{errors.target_date}</p>}
         </div>
+      </div>
+
+      <div>
+        <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 mb-2">
+          <Tag className="w-3.5 h-3.5" />
+          Etiquetas
+        </label>
+        <div className="flex flex-wrap gap-2 mb-2">
+          {availableTags.map(tag => {
+            const selected = selectedTagIds.includes(tag.id);
+            return (
+              <button
+                key={tag.id}
+                type="button"
+                onClick={() => toggleTag(tag.id)}
+                className={`px-3 py-1 rounded-full text-xs font-medium border transition-all ${
+                  selected
+                    ? "bg-violet-100 text-violet-700 border-violet-300"
+                    : "bg-white text-gray-500 border-gray-200 hover:border-violet-300 hover:text-violet-600"
+                }`}
+              >
+                {selected && <span className="mr-1">✓</span>}
+                {tag.name}
+              </button>
+            );
+          })}
+          {!showTagInput && (
+            <button
+              type="button"
+              onClick={() => setShowTagInput(true)}
+              className="px-3 py-1 rounded-full text-xs font-medium border border-dashed border-gray-300 text-gray-400 hover:border-violet-400 hover:text-violet-600 flex items-center gap-1 transition-colors"
+            >
+              <Plus className="w-3 h-3" /> Nueva etiqueta
+            </button>
+          )}
+        </div>
+        {showTagInput && (
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={newTagName}
+              onChange={e => setNewTagName(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === "Enter") { e.preventDefault(); handleCreateTag(); }
+                if (e.key === "Escape") { setShowTagInput(false); setNewTagName(""); }
+              }}
+              placeholder="Nombre de etiqueta..."
+              maxLength={50}
+              className="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-violet-400"
+              autoFocus
+            />
+            <button
+              type="button"
+              onClick={handleCreateTag}
+              disabled={creatingTag || !newTagName.trim()}
+              className="px-3 py-1.5 rounded-lg bg-violet-600 text-white text-xs font-semibold hover:opacity-90 disabled:opacity-50"
+            >
+              {creatingTag ? "..." : "Crear"}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setShowTagInput(false); setNewTagName(""); }}
+              className="p-1.5 text-gray-400 hover:text-gray-600"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="pt-4 flex gap-3">
