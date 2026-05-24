@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
-from app.models import User, Project, Client, ProjectState
+from app.models import User, Project, Client, ProjectState, TaskStatus
 from app.schemas.project import (
     ProjectCreate,
     ProjectListItem,
@@ -107,6 +107,7 @@ def get_project(
     return _to_list_item(project)
 
 
+# --- PUT (legacy query-param, kept for backwards compatibility) ---
 
 @router.put("/", response_model=ProjectResponse, status_code=200)
 def update_project(
@@ -142,8 +143,50 @@ def update_project(
     )
     return _to_response(full_project)
 
+@router.put("/{project_id}", response_model=ProjectResponse, status_code=200)
+def update_project_by_id(
+    project_id: str,
+    project: ProjectUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    existing = (
+        db.query(Project)
+        .options(joinedload(Project.tasks))
+        .filter(Project.id == project_id, Project.user_id == current_user.id)
+        .first()
+    )
 
-# --- helpers ---
+    if not existing:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+
+    data = project.model_dump(exclude_unset=True)
+    closing = data.get("state") == ProjectState.completed
+
+    for key, value in data.items():
+        setattr(existing, key, value)
+
+    if closing:
+        print(f"[DEBUG] Cerrando proyecto {project_id}, tareas: {len(existing.tasks)}")
+        for task in existing.tasks:
+            print(f"[DEBUG] Tarea {task.id} estado: {task.status}")
+            if task.status != TaskStatus.completed:
+                task.status = TaskStatus.completed
+
+    try:
+        db.commit()
+        db.refresh(existing)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error al actualizar el proyecto: {str(e)}")
+
+    full_project = (
+        db.query(Project)
+        .options(joinedload(Project.client), joinedload(Project.tasks))
+        .filter(Project.id == project_id)
+        .first()
+    )
+    return _to_response(full_project)
 
 def _progress(total: int, completed: int) -> int:
     return round((completed / total) * 100) if total > 0 else 0
@@ -193,45 +236,3 @@ def _to_response(p: Project) -> ProjectResponse:
         progress_percentage=_progress(total, completed),
         days_until_deadline=days, deadline_alert=alert,
     )
-
-@router.put("/{project_id}", response_model=ProjectResponse, status_code=200)
-def update_project_by_id(
-    project_id: str,
-    project: ProjectUpdate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    existing = db.query(Project).filter(
-        Project.id == project_id,
-        Project.user_id == current_user.id
-    ).first()
-
-    if not existing:
-        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
-
-    data = project.model_dump(exclude_unset=True)
-    closing = data.get("state") == ProjectState.completed
-
-    for key, value in data.items():
-        setattr(existing, key, value)
-
-    # Al cerrar el proyecto, todas las tareas pendientes pasan a completada
-    if closing:
-        for task in existing.tasks:
-            if task.status not in _COMPLETED_TASK_STATUS:
-                task.status = "Completada"
-
-    try:
-        db.commit()
-        db.refresh(existing)
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=f"Error al actualizar el proyecto: {str(e)}")
-
-    full_project = (
-        db.query(Project)
-        .options(joinedload(Project.client), joinedload(Project.tasks))
-        .filter(Project.id == project_id)
-        .first()
-    )
-    return _to_response(full_project)

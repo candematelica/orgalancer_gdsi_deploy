@@ -39,7 +39,7 @@ export async function PUT(
     const token = req.cookies.get("token")?.value
     const { user_id, ...projectData } = await req.json();
 
-    const response = await fetch(`${process.env.API_URL}/projects/?project_id=${id}`, {
+    const response = await fetch(`${process.env.API_URL}/projects/${id}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
