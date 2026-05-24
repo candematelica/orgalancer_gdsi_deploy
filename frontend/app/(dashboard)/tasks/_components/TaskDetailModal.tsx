@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Calendar, FolderOpen, Clock, User } from "lucide-react";
+import { Calendar, FolderOpen, Clock, User, Tag } from "lucide-react";
+
+interface TagItem {
+  id: string;
+  name: string;
+}
 
 interface Task {
   id: string;
@@ -12,6 +17,7 @@ interface Task {
   project_id: string;
   project_name: string | null;
   status: string;
+  tags: TagItem[];
 }
 
 interface Props {
@@ -94,6 +100,24 @@ export default function TaskDetailModal({ task, onClose, onDelete }: Props) {
               {task.description}
             </p>
           </div>
+
+          {task.tags && task.tags.length > 0 && (
+            <div>
+              <h3 className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                <Tag className="w-3.5 h-3.5" /> Etiquetas
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {task.tags.map(tag => (
+                  <span
+                    key={tag.id}
+                    className="px-3 py-1 rounded-full text-xs font-medium bg-violet-100 text-violet-700 border border-violet-200"
+                  >
+                    {tag.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-gray-50 rounded-xl p-4 flex items-start gap-3">
