@@ -1,11 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Plus, Clock, Check, Circle, CheckCircle2, CircleDot, Calendar, User, LayoutList, FolderOpen } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Plus, Clock, Check, Circle, CheckCircle2, CircleDot, AlertOctagon, Calendar, User, LayoutList, FolderOpen, Tag } from "lucide-react";
 import SectionHeader from "./../_components/section_header"
 import TaskModal from "./_components/TaskModal";
 import TaskForm from "./_components/TaskForm";
 import TaskDetailModal from "./_components/TaskDetailModal";
+
+interface TagItem {
+  id: string;
+  name: string;
+}
 
 interface Task {
   id: string;
@@ -16,6 +21,7 @@ interface Task {
   project_id: string;
   project_name: string | null;
   status: string;
+  tags: TagItem[];
 }
 
 export default function TasksPage() {
@@ -25,15 +31,19 @@ export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("Todas");
+  const [availableTags, setAvailableTags] = useState<TagItem[]>([]);
+  const [selectedTagId, setSelectedTagId] = useState<string | null>(null);
 
-  const filters = ["Todas", "Pendientes", "En Progreso", "Completadas"];
+  const filters = ["Todas", "Pendientes", "En Progreso", "Bloqueadas", "Completadas"];
 
-  const fetchTasks = async () => {
+  const fetchTasks = useCallback(async () => {
     try {
       const token = localStorage.getItem("token");
       if (!token) return;
 
-      const res = await fetch("/api/tasks", {
+      const url = selectedTagId ? `/api/tasks?tag_id=${selectedTagId}` : "/api/tasks";
+
+      const res = await fetch(url, {
         headers: {
           "Authorization": `Bearer ${token}`
         }
@@ -50,10 +60,27 @@ export default function TasksPage() {
     } finally {
       setLoading(false);
     }
+  }, [selectedTagId]);
+
+  const fetchTags = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+      const res = await fetch("/api/tasks/tags", {
+        headers: { "Authorization": `Bearer ${token}` },
+      });
+      if (res.ok) setAvailableTags(await res.json());
+    } catch (error) {
+      console.error("Error fetching tags:", error);
+    }
   };
 
   useEffect(() => {
     fetchTasks();
+  }, [fetchTasks]);
+
+  useEffect(() => {
+    fetchTags();
   }, []);
 
   const handleSuccess = () => {
@@ -61,6 +88,7 @@ export default function TasksPage() {
     setToast({ message: "Tarea creada exitosamente", type: "success" });
     setTimeout(() => setToast(null), 3000);
     fetchTasks();
+    fetchTags();
   };
 
   const handleError = (msg: string) => {
@@ -71,7 +99,7 @@ export default function TasksPage() {
   const handleStatusCycle = async (task: Task, e: React.MouseEvent) => {
     e.stopPropagation();
 
-    const statusOrder = ["Pendiente", "En Progreso", "Completada"];
+    const statusOrder = ["Pendiente", "En Progreso", "Bloqueada", "Completada"];
     const currentIndex = statusOrder.indexOf(task.status);
     const nextStatus = statusOrder[(currentIndex + 1) % statusOrder.length];
 
@@ -131,6 +159,7 @@ export default function TasksPage() {
     if (filter === "Todas") return true;
     if (filter === "Pendientes") return task.status === "Pendiente";
     if (filter === "En Progreso") return task.status === "En Progreso";
+    if (filter === "Bloqueadas") return task.status === "Bloqueada";
     if (filter === "Completadas") return task.status === "Completada";
     return true;
   });
@@ -149,7 +178,7 @@ export default function TasksPage() {
       </SectionHeader>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-2 mb-6">
+      <div className="flex flex-wrap gap-2 mb-3">
         {filters.map((f) => (
           <button
             key={f}
@@ -163,6 +192,36 @@ export default function TasksPage() {
           </button>
         ))}
       </div>
+
+      {/* Tag filters */}
+      {availableTags.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-5 items-center">
+          <Tag className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+          <button
+            onClick={() => setSelectedTagId(null)}
+            className={`px-3 py-1 rounded-full text-xs transition-colors border ${
+              selectedTagId === null
+                ? "bg-violet-100 text-violet-700 font-semibold border-transparent"
+                : "bg-white text-gray-400 border-gray-200 hover:text-violet-600"
+            }`}
+          >
+            Todas las etiquetas
+          </button>
+          {availableTags.map(tag => (
+            <button
+              key={tag.id}
+              onClick={() => setSelectedTagId(selectedTagId === tag.id ? null : tag.id)}
+              className={`px-3 py-1 rounded-full text-xs transition-colors border ${
+                selectedTagId === tag.id
+                  ? "bg-violet-100 text-violet-700 font-semibold border-violet-200"
+                  : "bg-white text-gray-400 border-gray-200 hover:text-violet-600 hover:border-violet-200"
+              }`}
+            >
+              {tag.name}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Contenido */}
       {loading ? (
@@ -211,6 +270,8 @@ export default function TasksPage() {
                     <CheckCircle2 className="text-green-500" size={24} />
                   ) : task.status === "En Progreso" ? (
                     <CircleDot className="text-yellow-500" size={24} />
+                  ) : task.status === "Bloqueada" ? (
+                    <AlertOctagon className="text-orange-400" size={24} />
                   ) : (
                     <Circle className="text-gray-300" size={24} />
                   )}
@@ -231,6 +292,14 @@ export default function TasksPage() {
                         {task.priority}
                       </span>
                     </div>
+                    {task.tags?.map(tag => (
+                      <span
+                        key={tag.id}
+                        className="px-2 py-0.5 rounded-full text-xs font-medium bg-violet-50 text-violet-600 border border-violet-100"
+                      >
+                        {tag.name}
+                      </span>
+                    ))}
                   </div>
                 </div>
               </div>
