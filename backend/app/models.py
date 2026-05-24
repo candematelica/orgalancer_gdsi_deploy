@@ -5,6 +5,7 @@ from sqlalchemy.orm import relationship
 from app.database import Base
 import enum
 
+
 class User(Base):
     __tablename__ = "users"
 
@@ -20,8 +21,9 @@ class User(Base):
     years_of_experience = Column(String, nullable=True)
 
     financial_config = relationship("FinancialConfiguration", back_populates="user", uselist=False)
-    
+
     projects = relationship("Project", back_populates="user", cascade="all, delete-orphan")
+
 
 class FinancialConfiguration(Base):
     __tablename__ = "financial_configurations"
@@ -36,6 +38,7 @@ class FinancialConfiguration(Base):
     fixed_expenses = Column(Float, nullable=True, default=0.0)
 
     user = relationship("User", back_populates="financial_config")
+
 
 class Client(Base):
     __tablename__ = "clients"
@@ -52,15 +55,18 @@ class Client(Base):
 
     projects = relationship("Project", back_populates="client")
 
+
 class ContractType(enum.Enum):
     hourly = "hourly"
     fixed_price = "fixed_price"
     retainer = "retainer"
 
+
 class ProjectState(enum.Enum):
     active = "active"
     completed = "completed"
     cancelled = "cancelled"
+
 
 class Project(Base):
     __tablename__ = "projects"
@@ -68,24 +74,26 @@ class Project(Base):
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
     client_id = Column(String, ForeignKey("clients.id"), nullable=True, index=True)
-    
+
     name = Column(String, nullable=False)
     description = Column(String, nullable=True)
-    contract_type = Column( SQLEnum(ContractType), nullable=False)
+    contract_type = Column(SQLEnum(ContractType), nullable=False)
     estimated_budget = Column(Numeric(10, 2), nullable=False, default=0.00)
     earned = Column(Numeric(10, 2), nullable=False, default=0.00)
-    start_date = Column(Date,  nullable=True)
+    start_date = Column(Date, nullable=True)
     deadline = Column(Date, nullable=True)
-    state = Column( SQLEnum(ProjectState), nullable=False, default=ProjectState.active)
+    state = Column(SQLEnum(ProjectState), nullable=False, default=ProjectState.active)
 
     user = relationship("User", back_populates="projects")
     client = relationship("Client", back_populates="projects")
     tasks = relationship("Task", back_populates="project", cascade="all, delete-orphan")
 
+
 class TaskStatus(str, enum.Enum):
     pending = "Pendiente"
     in_progress = "En Progreso"
     completed = "Completada"
+
 
 task_tags = Table(
     "task_tags",
@@ -94,6 +102,7 @@ task_tags = Table(
     Column("tag_id", String, ForeignKey("tags.id", ondelete="CASCADE"), primary_key=True),
 )
 
+
 class Tag(Base):
     __tablename__ = "tags"
 
@@ -101,8 +110,9 @@ class Tag(Base):
     user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
     name = Column(String(50), nullable=False)
 
-    tasks = relationship("Task", secondary=task_tags, back_populates="tasks")
-    
+    tasks = relationship("Task", secondary=task_tags, back_populates="tags")
+
+
 class Task(Base):
     __tablename__ = "tasks"
 
@@ -116,6 +126,7 @@ class Task(Base):
     status = Column(SQLEnum(TaskStatus), default=TaskStatus.pending, nullable=False)
     created_at = Column(String, nullable=False)
     updated_at = Column(String, nullable=False)
-    tags = relationship("Tag", secondary=task_tags, back_populates="tags")
+
+    tags = relationship("Tag", secondary=task_tags, back_populates="tasks")
     user = relationship("User")
     project = relationship("Project", back_populates="tasks")
