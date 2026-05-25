@@ -7,13 +7,18 @@ from app.routers.auth import get_current_user
 
 router = APIRouter(prefix="/clients", tags=["clients"])
 
+
 @router.post("", response_model=ClientResponse, status_code=201)
 def create_client(
     client: ClientCreate,
     db: Session = Depends(get_db),
     current_user: str = Depends(get_current_user)
 ):
-    if db.query(Client).filter(Client.email == client.email, Client.user_id == current_user.id).first():
+    if db.query(Client).filter(
+        Client.email == client.email,
+        Client.user_id == current_user.id,
+        Client.is_deleted == False
+    ).first():
         raise HTTPException(status_code=400, detail="Ya existe un cliente con ese email")
 
     new = Client(**client.model_dump(), user_id=current_user.id)
@@ -28,7 +33,10 @@ def display_clients(
     db: Session = Depends(get_db),
     current_user: str = Depends(get_current_user)
 ):
-    return db.query(Client).filter(Client.user_id == current_user.id).all()
+    return db.query(Client).filter(
+        Client.user_id == current_user.id,
+        Client.is_deleted == False
+    ).all()
 
 
 @router.get("/{client_id}", response_model=ClientResponse)
@@ -39,7 +47,8 @@ def get_client(
 ):
     client = db.query(Client).filter(
         Client.id == client_id,
-        Client.user_id == current_user.id
+        Client.user_id == current_user.id,
+        Client.is_deleted == False
     ).first()
     if not client:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
@@ -55,7 +64,8 @@ def update_client(
 ):
     client = db.query(Client).filter(
         Client.id == client_id,
-        Client.user_id == current_user.id
+        Client.user_id == current_user.id,
+        Client.is_deleted == False
     ).first()
     if not client:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
@@ -63,7 +73,8 @@ def update_client(
     email_exists = db.query(Client).filter(
         Client.email == client_data.email,
         Client.user_id == current_user.id,
-        Client.id != client_id
+        Client.id != client_id,
+        Client.is_deleted == False
     ).first()
     if email_exists:
         raise HTTPException(status_code=400, detail="Ya existe otro cliente con ese email")
@@ -80,6 +91,7 @@ def update_client(
     db.refresh(client)
 
     return client
+
 
 @router.delete("/{client_id}", status_code=200)
 def delete_client(
