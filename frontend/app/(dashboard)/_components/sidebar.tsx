@@ -8,9 +8,19 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
 
-  const handleLogout = () => {
-    localStorage.removeItem("user");
-    router.push("/login");
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", {
+        method: "POST"
+      });
+
+      localStorage.removeItem("user");
+      router.push("/login");
+      router.refresh();
+
+    } catch (error) {
+      console.error("Error al cerrar sesión", error);
+    }
   };
 
   return (
@@ -39,11 +49,10 @@ export default function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-3 px-3 py-3 rounded-xl text-sm transition-all leading-none ${
-                is_active
-                  ? "bg-white/20 text-white shadow-[0_0_20px_rgba(0,0,0,0.25)] scale-[1.02]" 
-                  : "text-purple-200 hover:bg-white/10 hover:text-white"
-              }`}
+              className={`flex items-center gap-3 px-3 py-3 rounded-xl text-sm transition-all leading-none ${is_active
+                ? "bg-white/20 text-white shadow-[0_0_20px_rgba(0,0,0,0.25)] scale-[1.02]"
+                : "text-purple-200 hover:bg-white/10 hover:text-white"
+                }`}
             >
               <span className={`flex items-center justify-center ${is_active ? "text-white" : "text-purple-300"}`}>
                 {item.icon}

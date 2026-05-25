@@ -36,19 +36,11 @@ export function useProjectDetail(id: string): UseProjectDetailReturn {
   const [error, setError] = useState<string | null>(null);
 
   const fetchProject = useCallback(async () => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      router.push("/login");
-      return;
-    }
-
     setLoading(true);
     setError(null);
 
     try {
-      const res = await fetch(`/api/projects/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(`/api/projects/${id}`);
 
       if (res.status === 401) {
         router.push("/login");
