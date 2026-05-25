@@ -34,6 +34,18 @@ export function useTimer(projectId: string, taskId: string, onTimeSaved: ((durat
     }
   }, [projectId, taskId]);
 
+  // Resetear cuando cambia el proyecto/tarea
+useEffect(() => {
+  if (status !== "idle") {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    setStatus("idle");
+    setSeconds(0);
+    setDescription("");
+    setError(null);
+    localStorage.removeItem(STORAGE_KEY);
+  }
+}, [projectId, taskId]);
+
   // Guardar estado en localStorage cuando cambia
   useEffect(() => {
     if (typeof window !== "undefined" && status !== "idle") {
