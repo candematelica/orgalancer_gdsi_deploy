@@ -152,7 +152,7 @@ export default function TimeHistory({ taskId, refreshKey }: TimeHistoryProps) {
       {mounted && deleteId && createPortal(
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[500] p-4">
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl">
-            <h3 className="font-semibold text-gray-800 mb-2">¿Eliminar entrada?</h3>
+            <h3 className="font-semibold text-gray-800 mb-2">¿Estás seguro?</h3>
             <p className="text-sm text-gray-500 mb-6">Esta acción no se puede deshacer.</p>
             <div className="flex justify-end gap-2">
               <button onClick={cancelDelete} className="px-4 py-2 rounded-xl text-sm text-gray-500 hover:bg-gray-50">
