@@ -8,7 +8,7 @@ export interface ProjectListItem {
   name: string;
   description: string | null;
   state: "active" | "completed" | "cancelled";
-  contract_type: "hourly" | "fixed_price" | "retainer"; 
+  contract_type: "hourly" | "fixed_price" | "retainer";
   estimated_budget: number;
   earned: number;
   start_date: string | null;
@@ -85,14 +85,12 @@ export const FILTER_TABS: { key: FilterTab; label: string }[] = [
 export type ViewMode = "grid" | "list";
 
 async function fetchProjects(
-  token: string,
   state?: string
 ): Promise<ProjectListItem[]> {
   const url = new URL("/api/projects", window.location.origin);
   if (state) url.searchParams.set("state", state);
 
   const res = await fetch(url.toString(), {
-    headers: { Authorization: `Bearer ${token}` },
     cache: "no-store",
   });
 
@@ -101,11 +99,10 @@ async function fetchProjects(
   return data;
 }
 
-async function fetchProjectStats(token: string): Promise<ProjectStats> {
+async function fetchProjectStats(): Promise<ProjectStats> {
   const url = new URL("/api/projects/stats", window.location.origin);
 
   const res = await fetch(url.toString(), {
-    headers: { Authorization: `Bearer ${token}` },
     cache: "no-store",
   });
 
@@ -124,21 +121,13 @@ export function useProjects() {
   const [activeFilter, setActiveFilter] = useState<FilterTab>("all");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
 
-  const getToken = (): string | null => localStorage.getItem("token");
-
   const loadProjects = useCallback(
     async (filter: FilterTab = activeFilter) => {
-      const token = getToken();
-      if (!token) {
-        router.push("/login");
-        return;
-      }
-
       setLoading(true);
       setError(null);
       try {
         const stateParam = filter === "all" ? undefined : filter;
-        const raw = await fetchProjects(token, stateParam);
+        const raw = await fetchProjects(stateParam);
         setProjects(raw.map(enrich));
       } catch (err: unknown) {
         setError(
@@ -152,12 +141,9 @@ export function useProjects() {
   );
 
   const loadStats = useCallback(async () => {
-    const token = getToken();
-    if (!token) return;
-
     setStatsLoading(true);
     try {
-      const s = await fetchProjectStats(token);
+      const s = await fetchProjectStats();
       setStats(s);
     } catch {
       // silent fail(?)
@@ -169,7 +155,7 @@ export function useProjects() {
   useEffect(() => {
     loadStats();
   }, [])
-;
+    ;
   useEffect(() => {
     loadProjects();
   }, [loadProjects]);

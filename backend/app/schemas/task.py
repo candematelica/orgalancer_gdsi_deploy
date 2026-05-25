@@ -23,5 +23,16 @@ class TaskResponse(TaskBase):
     class Config:
         from_attributes = True
 
+
 class TaskUpdateStatus(BaseModel):
     status: TaskStatus
+
+
+class TaskUpdate(BaseModel):
+    title: str = Field(..., max_length=100)
+    description: str
+    priority: str
+    status: TaskStatus
+    target_date: str
+    project_id: str
+

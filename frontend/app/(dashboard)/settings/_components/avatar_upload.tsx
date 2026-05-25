@@ -60,12 +60,8 @@ export default function AvatarUpload({ fullName, avatarUrl, onUploadSuccess }: A
     try {
       setUploading(true);
 
-      const token = localStorage.getItem("token");
-      if (!token) throw new Error("No estás autenticado.");
-
       const res = await fetch("/api/settings/avatar", {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
 

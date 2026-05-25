@@ -3,10 +3,13 @@ import { NextRequest, NextResponse } from "next/server";
 const API = process.env.API_URL;
 
 export async function GET(req: NextRequest) {
-  const token = req.headers.get("Authorization");
+  //const token = req.headers.get("Authorization");
+  const token = req.cookies.get("token")?.value
 
   const res = await fetch(`${API}/users/me`, {
-    headers: { Authorization: token ?? "" },
+    headers: {
+      Authorization: token ? `Bearer ${token}` : ""
+    },
   });
 
   const data = await res.json();
@@ -22,14 +25,14 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
-  const token = req.headers.get("Authorization");
+  const token = req.cookies.get("token")?.value
   const body = await req.json();
 
   const res = await fetch(`${API}/users/me`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
-      Authorization: token ?? "",
+      Authorization: token ? `Bearer ${token}` : ""
     },
     body: JSON.stringify(body),
   });

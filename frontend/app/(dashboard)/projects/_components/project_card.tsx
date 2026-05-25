@@ -4,7 +4,7 @@ import { EnrichedProject } from "../_hooks/use_projects";
 import ProgressBar from "./progress_bar";
 import StatusBadge from "./status_badge";
 import DeadlineChip from "./deadline_chip";
-import { useState } from "react"; 
+import { useState } from "react";
 
 interface ProjectCardProps {
   project: EnrichedProject;
@@ -32,25 +32,23 @@ export default function ProjectCard({
   onStartTimer,
 }: ProjectCardProps) {
 
-  const [currentState, setCurrentState] = useState(project.state); 
+  const [currentState, setCurrentState] = useState(project.state);
 
   async function handleStateChange(newState: "completed" | "cancelled" | "active") {
-    const token = localStorage.getItem("token");
     const previousState = currentState;
 
-    setCurrentState(newState); 
+    setCurrentState(newState);
     try {
       const res = await fetch(`/api/projects/${project!.id}`, {
         method: "PUT",
         headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({ id: project.id, state: newState }),
       });
       if (res.ok) {
         onStateChange?.();
-      }else{
+      } else {
         setCurrentState(previousState);
       }
     } catch (err) {
@@ -59,17 +57,17 @@ export default function ProjectCard({
     }
   }
   return (
-    
+
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-200 flex flex-col overflow-hidden">
       {/* Top section */}
-        <div className="p-5 flex-1">
-        
+      <div className="p-5 flex-1">
+
         <div className="flex items-start justify-between gap-2 mb-3">
           <div className="flex items-center gap-2 text-xs text-gray-400">
             <span className="w-5 h-5 text-gray-400">
               <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect x="3" y="5" width="14" height="11" rx="2" stroke="currentColor" strokeWidth="1.5"/>
-                <path d="M7 5V4a3 3 0 016 0v1" stroke="currentColor" strokeWidth="1.5"/>
+                <rect x="3" y="5" width="14" height="11" rx="2" stroke="currentColor" strokeWidth="1.5" />
+                <path d="M7 5V4a3 3 0 016 0v1" stroke="currentColor" strokeWidth="1.5" />
               </svg>
             </span>
           </div>

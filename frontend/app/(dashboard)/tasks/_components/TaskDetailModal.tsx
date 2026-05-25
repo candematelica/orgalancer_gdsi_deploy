@@ -16,18 +16,12 @@ interface Task {
 }
 
 interface Props {
-  task:            Task;
-  onClose:         () => void;
-  onDelete:        (taskId: string) => void;
+  task: Task;
+  onClose: () => void;
+  onDelete: (taskId: string) => void;
+  onEdit: (task: Task) => void;
   timeRefreshKey?: number;
 }
-
-const priorityColors: Record<string, string> = {
-  Baja:    "bg-green-100 text-green-700",
-  Media:   "bg-yellow-100 text-yellow-700",
-  Alta:    "bg-red-100 text-red-700",
-  Urgente: "bg-red-200 text-red-800",
-};
 
 const statusColors: Record<string, string> = {
   "Pendiente":   "text-gray-500 bg-gray-100",
@@ -35,7 +29,14 @@ const statusColors: Record<string, string> = {
   "Completada":  "text-green-700 bg-green-100",
 };
 
-export default function TaskDetailModal({ task, onClose, onDelete, timeRefreshKey = 0 }: Props) {
+const priorityColors: Record<string, string> = {
+  Baja:    "text-green-700 bg-green-100",
+  Media:   "text-yellow-700 bg-yellow-100",
+  Alta:    "text-red-700 bg-red-100",
+  Urgente: "text-red-800 bg-red-200",
+};
+
+export default function TaskDetailModal({ task, onClose, onDelete, onEdit, timeRefreshKey = 0 }: Props) {
   const {
     isDeleting,
     showDeleteConfirm,
@@ -108,17 +109,22 @@ export default function TaskDetailModal({ task, onClose, onDelete, timeRefreshKe
             </div>
           </div>
 
-          {/* Footer */}
-          <div className="flex gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50/50 rounded-b-2xl">
-            <button onClick={openDeleteConfirm} disabled={isDeleting}
-              className="flex-1 py-2.5 rounded-xl bg-white border border-red-200 text-red-600 text-sm font-semibold hover:bg-red-50 transition-colors disabled:opacity-60">
-              {isDeleting ? "Eliminando..." : "Eliminar"}
-            </button>
-            <button onClick={() => console.log("Implementar")}
-              className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-purple-500 text-white text-sm font-semibold hover:opacity-90 transition-opacity shadow-sm">
-              Editar
-            </button>
-          </div>
+        {/* Footer Buttons */}
+        <div className="flex gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50/50 rounded-b-2xl">
+          <button
+            onClick={handleDelete}
+            disabled={isDeleting}
+            className="flex-1 py-2.5 rounded-xl bg-white border border-red-200 text-red-600 text-sm font-semibold hover:bg-red-50 transition-colors disabled:opacity-60"
+          >
+            {isDeleting ? "Eliminando..." : "Eliminar"}
+          </button>
+          <button
+            onClick={() => onEdit(task)}
+            className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-purple-500 text-white text-sm font-semibold hover:opacity-90 transition-opacity shadow-sm"
+          >
+            Editar
+          </button>
+        </div>
         </div>
       </div>
 
