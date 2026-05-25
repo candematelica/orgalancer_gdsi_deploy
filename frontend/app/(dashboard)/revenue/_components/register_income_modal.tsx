@@ -33,9 +33,7 @@ function useOptions(apiPath: string, enabled: boolean): SelectOption[] {
   const [options, setOptions] = useState<SelectOption[]>([]);
   useEffect(() => {
     if (!enabled) return;
-    const token = localStorage.getItem("token");
-    if (!token) return;
-    fetch(apiPath, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" })
+    fetch(apiPath, { cache: "no-store" })
       .then((r) => r.ok ? r.json() : [])
       .then((data: any[]) => setOptions(data.map((d) => ({ id: d.id, name: d.name }))))
       .catch(() => {});
@@ -52,9 +50,7 @@ export default function RegisterIncomeModal({ open, onClose, onSave, currency, i
   const [allProjects, setAllProjects] = useState<ProjectOption[]>([]);
   useEffect(() => {
   if (!open) return;
-  const token = localStorage.getItem("token");
-  if (!token) return;
-  fetch("/api/projects", { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" })
+  fetch("/api/projects", { cache: "no-store" })
     .then(r => r.ok ? r.json() : [])
     .then((data: any[]) =>
       setAllProjects(data.map(p => ({ id: p.id, name: p.name, client_id: p.client_id ?? null })))

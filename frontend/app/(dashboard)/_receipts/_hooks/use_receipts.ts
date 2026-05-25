@@ -23,14 +23,9 @@ export function useReceipts(): UseReceiptsReturn {
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState<string | null>(null);
-
-  const getToken = () => localStorage.getItem("token");
-
   
   const load = useCallback(
     async (filters: { project_id?: string; client_id?: string } = {}) => {
-      const token = getToken();
-      if (!token) { router.push("/login"); return; }
 
       setLoading(true);
       setError(null);
@@ -41,7 +36,6 @@ export function useReceipts(): UseReceiptsReturn {
         if (filters.client_id)  url.searchParams.set("client_id",  filters.client_id);
 
         const res  = await fetch(url.toString(), {
-          headers: { Authorization: `Bearer ${token}` },
           cache: "no-store",
         });
         const data = await res.json();
@@ -57,15 +51,11 @@ export function useReceipts(): UseReceiptsReturn {
     [router]
   );
 
-
   const create = async (payload: ReceiptCreatePayload): Promise<boolean> => {
-    const token = getToken();
-    if (!token) return false;
-
     try {
       const res  = await fetch("/api/receipts", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
       const data = await res.json();
@@ -81,13 +71,10 @@ export function useReceipts(): UseReceiptsReturn {
 
 
   const markAs = async (id: string, status: ReceiptStatus): Promise<boolean> => {
-    const token = getToken();
-    if (!token) return false;
-
     try {
       const res  = await fetch(`/api/receipts/${id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
       });
       const data = await res.json();
@@ -103,13 +90,9 @@ export function useReceipts(): UseReceiptsReturn {
 
 
   const remove = async (id: string): Promise<boolean> => {
-    const token = getToken();
-    if (!token) return false;
-
     try {
       const res = await fetch(`/api/receipts/${id}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (!res.ok) {

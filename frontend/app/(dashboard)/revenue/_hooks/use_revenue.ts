@@ -40,11 +40,7 @@ export function useRevenue() {
   const [error, setError] = useState<string | null>(null);
   const [currency, setCurrency] = useState("$");
 
-  const getToken = () => localStorage.getItem("token");
-
   const load = useCallback(async (filters: RevenueFilters = {}) => {
-    const token = getToken();
-    if (!token) { router.push("/login"); return; }
 
     setLoading(true);
     setError(null);
@@ -56,7 +52,6 @@ export function useRevenue() {
       if (filters.to)         url.searchParams.set("to",          filters.to);
 
       const res = await fetch(url.toString(), {
-        headers: { Authorization: `Bearer ${token}` },
         cache: "no-store",
       });
       const data = await res.json();
@@ -86,16 +81,10 @@ export function useRevenue() {
   }, []);
 
   async function save(tx: Omit<Transaction, "id">): Promise<boolean> {
-    const token = getToken();
-    if (!token) return false;
-
     try {
       const res = await fetch("/api/revenue", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: {"Content-Type": "application/json",},
         body: JSON.stringify({
           amount: tx.amount,
           currency: tx.currency,
@@ -120,9 +109,6 @@ export function useRevenue() {
   }
 
   async function update(id: string, tx: Omit<Transaction, "id">): Promise<boolean> {
-    const token = getToken();
-    if (!token) return false;
-
     try {
       const payload = {
         amount:         tx.amount,
@@ -142,7 +128,7 @@ export function useRevenue() {
 
       const res = await fetch(`/api/revenue/${id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "application/json"},
         body: JSON.stringify(cleanPayload),
       });
 
@@ -159,13 +145,9 @@ export function useRevenue() {
   }
 
   async function remove(id: string): Promise<boolean> {
-    const token = getToken();
-    if (!token) return false;
-
     try {
       const res = await fetch(`/api/revenue/${id}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) {
         const data = await res.json();

@@ -3,7 +3,7 @@ import { parseBody, extractErrorMsg } from "../utils";
 
 export async function GET(req: NextRequest) {
   try {
-    const token = req.headers.get("Authorization");
+    const token = req.cookies.get("token")?.value;
     const { searchParams } = new URL(req.url);
 
     const upstream = new URL(`${process.env.API_URL}/receipts`);
@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
     if (clientId)  upstream.searchParams.set("client_id",  clientId);
 
     const response = await fetch(upstream.toString(), {
-      headers: { Authorization: token || "" },
+      headers: {Authorization: token ? `Bearer ${token}` : ""},
       cache: "no-store",
     });
 
@@ -33,12 +33,12 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const token = req.headers.get("Authorization");
+    const token = req.cookies.get("token")?.value;
     const body  = await req.json();
 
     const response = await fetch(`${process.env.API_URL}/receipts/`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: token || "" },
+      headers: { "Content-Type": "application/json", Authorization: token ? `Bearer ${token}` : "" },
       body: JSON.stringify(body),
     });
 

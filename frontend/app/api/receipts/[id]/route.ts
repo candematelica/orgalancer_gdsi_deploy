@@ -7,10 +7,10 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const token   = req.headers.get("Authorization");
+    const token   = req.cookies.get("token")?.value;
 
     const response = await fetch(`${process.env.API_URL}/receipts/${id}`, {
-      headers: { Authorization: token || "" },
+      headers: { Authorization: token ? `Bearer ${token}` : "" },
       cache: "no-store",
     });
 
@@ -34,12 +34,12 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
-    const token   = req.headers.get("Authorization");
+    const token   = req.cookies.get("token")?.value;
     const body    = await req.json();
 
     const response = await fetch(`${process.env.API_URL}/receipts/${id}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json", Authorization: token || "" },
+      headers: { "Content-Type": "application/json", Authorization: token ? `Bearer ${token}` : "" },
       body: JSON.stringify(body),
     });
 
@@ -63,11 +63,11 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    const token   = req.headers.get("Authorization");
+    const token   = req.cookies.get("token")?.value;
 
     const response = await fetch(`${process.env.API_URL}/receipts/${id}`, {
       method: "DELETE",
-      headers: { Authorization: token || "" },
+      headers: { Authorization: token ? `Bearer ${token}` : "" },
     });
 
     if (response.status === 204)
