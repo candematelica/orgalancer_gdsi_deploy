@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models import User, Client
+from app.models import User, Client, Project, ProjectState
 from app.schemas import ClientCreate, ClientUpdate, ClientResponse
 from app.routers.auth import get_current_user
 
@@ -80,3 +80,34 @@ def update_client(
     db.refresh(client)
 
     return client
+
+@router.delete("/{client_id}", status_code=200)
+def delete_client(
+    client_id: str,
+    action: str = "cancel",
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    client = db.query(Client).filter(
+        Client.id == client_id,
+        Client.user_id == current_user.id,
+        Client.is_deleted == False
+    ).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+
+    active_projects = db.query(Project).filter(
+        Project.client_id == client_id,
+        Project.state == ProjectState.active
+    ).all()
+
+    if active_projects:
+        if action not in ("cancel", "complete"):
+            raise HTTPException(status_code=400, detail="Acción inválida. Usá 'cancel' o 'complete'")
+        new_state = ProjectState.cancelled if action == "cancel" else ProjectState.completed
+        for project in active_projects:
+            project.state = new_state
+
+    client.is_deleted = True
+    db.commit()
+    return {"detail": "Cliente eliminado correctamente"}
