@@ -4,10 +4,13 @@ import { parseBody, extractErrorMsg } from "./../../utils";
 // Get aggregated statistics about projects
 export async function GET(req: NextRequest) {
   try {
-    const token = req.headers.get("Authorization");
+    const token = req.cookies.get("token")?.value
 
     const response = await fetch(`${process.env.API_URL}/projects/stats`, {
-      headers: { "Content-Type": "application/json", "Authorization": token || "" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: token ? `Bearer ${token}` : ""
+      },
       cache: "no-store",
     });
 

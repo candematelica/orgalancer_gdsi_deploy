@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Calendar, FolderOpen, Clock, User } from "lucide-react";
+import { Calendar, FolderOpen } from "lucide-react";
 
 interface Task {
   id: string;
@@ -18,9 +18,10 @@ interface Props {
   task: Task;
   onClose: () => void;
   onDelete: (taskId: string) => void;
+  onEdit: (task: Task) => void;
 }
 
-export default function TaskDetailModal({ task, onClose, onDelete }: Props) {
+export default function TaskDetailModal({ task, onClose, onDelete, onEdit }: Props) {
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
@@ -128,7 +129,7 @@ export default function TaskDetailModal({ task, onClose, onDelete }: Props) {
             {isDeleting ? "Eliminando..." : "Eliminar"}
           </button>
           <button
-            onClick={() => console.log("Implementar")}
+            onClick={() => onEdit(task)}
             className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-purple-500 text-white text-sm font-semibold hover:opacity-90 transition-opacity shadow-sm"
           >
             Editar

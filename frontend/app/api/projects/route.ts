@@ -8,9 +8,12 @@ export async function GET(req: NextRequest) {
     const backendUrl = new URL(`${process.env.API_URL}/projects/`);
     if (state) backendUrl.searchParams.set("state", state);
 
-    const token = req.headers.get("Authorization");
+    const token = req.cookies.get("token")?.value
     const response = await fetch(backendUrl.toString(), {
-      headers: { "Content-Type": "application/json", "Authorization": token || "" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: token ? `Bearer ${token}` : ""
+      },
       cache: "no-store",
     });
 
@@ -29,12 +32,15 @@ export async function GET(req: NextRequest) {
 // Create a new project
 export async function POST(req: NextRequest) {
   try {
-    const token = req.headers.get("Authorization");
+    const token = req.cookies.get("token")?.value
     const { user_id, ...projectData } = await req.json();
 
     const response = await fetch(`${process.env.API_URL}/projects/`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": token || "" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: token ? `Bearer ${token}` : ""
+      },
       body: JSON.stringify(projectData),
     });
 

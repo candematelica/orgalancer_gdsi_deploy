@@ -58,9 +58,6 @@ export function useProfileForm(profile: ProfileData, onUpdate: (updated: Partial
     setError(null);
 
     try {
-      const token = localStorage.getItem("token");
-      if (!token) throw new Error("No estás autenticado.");
-
       const payload = {
         full_name: fullName,
         profession: profession.trim() || null,
@@ -73,8 +70,7 @@ export function useProfileForm(profile: ProfileData, onUpdate: (updated: Partial
       const res = await fetch("/api/settings", {
         method: "PUT",
         headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
         },
         body: JSON.stringify(payload),
       });
@@ -95,7 +91,7 @@ export function useProfileForm(profile: ProfileData, onUpdate: (updated: Partial
             JSON.stringify({ ...JSON.parse(raw), full_name: fullName })
           );
         }
-      } catch {}
+      } catch { }
 
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3500);
