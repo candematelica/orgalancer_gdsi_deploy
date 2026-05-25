@@ -115,7 +115,7 @@ export default function TasksPage() {
   const handleStatusCycle = async (task: Task, e: React.MouseEvent) => {
     e.stopPropagation();
 
-    const statusOrder = ["Pendiente", "En Progreso", "Bloqueada", "Completada"];
+    const statusOrder = ["Pendiente", "En Progreso", "Completada", "Bloqueada"];
     const currentIndex = statusOrder.indexOf(task.status);
     const nextStatus = statusOrder[(currentIndex + 1) % statusOrder.length];
 

@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 
 from app.database import get_db
 from app.models import User, Task, TaskStatus, Project, Tag
-from app.schemas.task import TaskCreate, TaskResponse, TaskUpdateStatus, TaskUpdate
+from app.schemas.task import TaskCreate, TaskResponse, TaskUpdateStatus, TaskUpdate, TaskUpdatePriority
 from app.routers.auth import get_current_user
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
@@ -149,3 +149,21 @@ def delete_task(
     db.commit()
 
     return None
+
+
+@router.patch("/{task_id}/priority", response_model=TaskResponse)
+def update_task_priority(
+    task_id: str,
+    priority_in: TaskUpdatePriority,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    task = db.query(Task).filter(Task.id == task_id, Task.user_id == current_user.id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Tarea no encontrada")
+
+    task.priority = priority_in.priority
+    task.updated_at = datetime.now(timezone.utc).isoformat()
+    db.commit()
+    db.refresh(task)
+    return task

@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field
 from typing import List, Optional
 
 from app.models import TaskStatus
+from app.models import TaskPriority
 
 class TagBase(BaseModel):
     name: str = Field(..., max_length=50)
@@ -20,7 +21,7 @@ class TagResponse(TagBase):
 class TaskBase(BaseModel):
     title: str = Field(..., max_length=100)
     description: str
-    priority: str
+    priority: TaskPriority
     project_id: str
     target_date: str
 
@@ -47,9 +48,11 @@ class TaskUpdateStatus(BaseModel):
 class TaskUpdate(BaseModel):
     title: str = Field(..., max_length=100)
     description: str
-    priority: str
+    priority: TaskPriority
     status: TaskStatus
     tag_ids: List[str] = []
     target_date: str
     project_id: str
 
+class TaskUpdatePriority(BaseModel):
+    priority: TaskPriority

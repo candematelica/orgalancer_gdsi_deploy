@@ -8,6 +8,11 @@ interface Project {
   name: string;
 }
 
+interface TagItem {
+  id: string;
+  name: string;
+}
+
 interface Task {
   id: string;
   title: string;
@@ -18,11 +23,6 @@ interface Task {
   project_id: string;
   project_name: string | null;
   status: string;
-}
-
-interface TagItem {
-  id: string;
-  name: string;
 }
 
 interface TaskFormProps {
@@ -37,13 +37,19 @@ export default function TaskForm({ taskToEdit, onSuccess, onError, onClose }: Ta
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [projects, setProjects] = useState<Project[]>([]);
   const [loadingProjects, setLoadingProjects] = useState(true);
+
+  const [selectedStatus, setSelectedStatus] = useState(taskToEdit?.status || "Pendiente");
+  const [selectedPriority, setSelectedPriority] = useState(taskToEdit?.priority || "Media");
   const [selectedProjectId, setSelectedProjectId] = useState(taskToEdit?.project_id || "");
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
 
   const [availableTags, setAvailableTags] = useState<TagItem[]>([]);
-  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [showTagInput, setShowTagInput] = useState(false);
   const [newTagName, setNewTagName] = useState("");
   const [creatingTag, setCreatingTag] = useState(false);
+
+  const PRIORITIES = ["Baja", "Media", "Alta", "Urgente"];
+  const STATUSES = ["Pendiente", "En Progreso", "Completada", "Bloqueada"];
 
   useEffect(() => {
     if (taskToEdit) {
@@ -89,13 +95,8 @@ export default function TaskForm({ taskToEdit, onSuccess, onError, onClose }: Ta
     fetchTags();
   }, []);
 
-  const validate = (formData: FormData) => {
+  const validate = (title: string, description: string, targetDateStr: string) => {
     const newErrors: Record<string, string> = {};
-    const title = formData.get("title") as string;
-    const description = formData.get("description") as string;
-    const projectId = formData.get("project_id") as string;
-    const priority = formData.get("priority") as string;
-    const targetDateStr = formData.get("target_date") as string;
 
     if (!title?.trim()) {
       newErrors.title = "El título es requerido.";
@@ -107,11 +108,11 @@ export default function TaskForm({ taskToEdit, onSuccess, onError, onClose }: Ta
       newErrors.description = "La descripción es requerida.";
     }
 
-    if (!projectId?.trim()) {
+    if (!selectedProjectId?.trim()) {
       newErrors.project_id = "El proyecto es requerido.";
     }
 
-    if (!priority?.trim()) {
+    if (!selectedPriority?.trim()) {
       newErrors.priority = "La prioridad es requerida.";
     }
 
@@ -119,12 +120,12 @@ export default function TaskForm({ taskToEdit, onSuccess, onError, onClose }: Ta
       newErrors.target_date = "La fecha objetivo es requerida.";
     } else {
       const targetDate = new Date(targetDateStr);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      const todayDate = new Date();
+      todayDate.setHours(0, 0, 0, 0);
 
       const targetDateLocal = new Date(targetDate.getTime() + targetDate.getTimezoneOffset() * 60000);
 
-      if (!taskToEdit && targetDateLocal < today) {
+      if (!taskToEdit && targetDateLocal < todayDate) {
         newErrors.target_date = "La fecha no puede estar en el pasado.";
       }
     }
@@ -136,8 +137,11 @@ export default function TaskForm({ taskToEdit, onSuccess, onError, onClose }: Ta
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+    const title = formData.get("title") as string;
+    const description = formData.get("description") as string;
+    const target_date = formData.get("target_date") as string;
 
-    if (!validate(formData)) {
+    if (!validate(title, description, target_date)) {
       return;
     }
 
@@ -145,12 +149,12 @@ export default function TaskForm({ taskToEdit, onSuccess, onError, onClose }: Ta
 
     try {
       const payload = {
-        title: formData.get("title"),
-        description: formData.get("description"),
-        project_id: formData.get("project_id"),
-        priority: formData.get("priority"),
-        target_date: formData.get("target_date"),
-        status: taskToEdit?.status || "Pendiente",
+        title,
+        description,
+        project_id: selectedProjectId,
+        priority: selectedPriority,
+        target_date,
+        status: selectedStatus,
         tag_ids: selectedTagIds,
       };
 
@@ -179,7 +183,6 @@ export default function TaskForm({ taskToEdit, onSuccess, onError, onClose }: Ta
 
     } catch (err: any) {
       onError(err.message || "Error desconocido");
-
     } finally {
       setLoading(false);
     }
@@ -217,6 +220,22 @@ export default function TaskForm({ taskToEdit, onSuccess, onError, onClose }: Ta
 
   const today = new Date().toISOString().split('T')[0];
 
+  const priorityStyles: Record<string, string> = {
+    Baja: "border-green-300 bg-green-100 text-green-700 focus:ring-green-400",
+    Media: "border-yellow-300 bg-yellow-100 text-yellow-700 focus:ring-yellow-400",
+    Alta: "border-red-300 bg-red-100 text-red-700 focus:ring-red-400",
+    Urgente: "border-red-400 bg-red-200 text-red-800 focus:ring-red-500",
+  };
+
+  const statusStyles: Record<string, string> = {
+    "Pendiente": "border-gray-300 bg-gray-100 text-gray-700 focus:ring-gray-400",
+    "En Progreso": "border-blue-300 bg-blue-100 text-blue-700 focus:ring-blue-400",
+    "Completada": "border-green-300 bg-green-100 text-green-700 focus:ring-green-400",
+    "Bloqueada": "border-orange-300 bg-orange-100 text-orange-700 focus:ring-orange-400",
+  };
+
+  const baseButtonClasses = "py-2 px-1 rounded-xl text-sm font-medium border focus:outline-none focus:ring-2";
+
   return (
     <form onSubmit={handleSubmit} className="space-y-5" noValidate>
       <div>
@@ -228,7 +247,7 @@ export default function TaskForm({ taskToEdit, onSuccess, onError, onClose }: Ta
           id="title"
           name="title"
           defaultValue={taskToEdit?.title || ""}
-          className={`w-full px-4 py-2.5 border rounded-xl text-sm text-gray-800 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-violet-400 transition-colors ${errors.title ? 'border-red-500' : 'border-gray-300'}`}
+          className={`w-full px-4 py-2.5 border rounded-xl text-sm text-gray-800 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-violet-400 ${errors.title ? 'border-red-500' : 'border-gray-300'}`}
           placeholder="Ej: Desarrollo de e-commerce"
           maxLength={100}
         />
@@ -244,14 +263,14 @@ export default function TaskForm({ taskToEdit, onSuccess, onError, onClose }: Ta
           name="description"
           rows={3}
           defaultValue={taskToEdit?.description || ""}
-          className={`w-full px-4 py-2.5 border rounded-xl text-sm text-gray-800 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-violet-400 transition-colors resize-none ${errors.description ? 'border-red-500' : 'border-gray-300'}`}
+          className={`w-full px-4 py-2.5 border rounded-xl text-sm text-gray-800 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-violet-400 resize-none ${errors.description ? 'border-red-500' : 'border-gray-300'}`}
           placeholder="Describe los detalles de la tarea..."
         />
         {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        <div className="md:col-span-2">
+        <div>
           <label htmlFor="project_id" className="block text-sm font-medium text-gray-700 mb-1">
             Proyecto Asignado <span className="text-red-500">*</span>
           </label>
@@ -261,7 +280,7 @@ export default function TaskForm({ taskToEdit, onSuccess, onError, onClose }: Ta
             value={selectedProjectId}
             onChange={(e) => setSelectedProjectId(e.target.value)}
             disabled={loadingProjects}
-            className={`w-full px-4 py-2.5 border rounded-xl text-sm text-gray-800 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-violet-400 transition-colors bg-white disabled:bg-gray-50 disabled:text-gray-400 ${errors.project_id ? 'border-red-500' : 'border-gray-300'}`}
+            className={`w-full px-4 py-2.5 border rounded-xl text-sm text-gray-800 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-violet-400 bg-white disabled:bg-gray-50 disabled:text-gray-400 ${errors.project_id ? 'border-red-500' : 'border-gray-300'}`}
           >
             {loadingProjects ? (
               <option value="">Cargando proyectos...</option>
@@ -283,25 +302,6 @@ export default function TaskForm({ taskToEdit, onSuccess, onError, onClose }: Ta
         </div>
 
         <div>
-          <label htmlFor="priority" className="block text-sm font-medium text-gray-700 mb-1">
-            Prioridad <span className="text-red-500">*</span>
-          </label>
-          <select
-            id="priority"
-            name="priority"
-            defaultValue={taskToEdit?.priority || ""}
-            className={`w-full px-4 py-2.5 border rounded-xl text-sm text-gray-800 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-violet-400 transition-colors bg-white ${errors.priority ? 'border-red-500' : 'border-gray-300'}`}
-          >
-            <option value="">Selecciona la prioridad...</option>
-            <option value="Baja">Baja</option>
-            <option value="Media">Media</option>
-            <option value="Alta">Alta</option>
-            <option value="Urgente">Urgente</option>
-          </select>
-          {errors.priority && <p className="text-red-500 text-xs mt-1">{errors.priority}</p>}
-        </div>
-
-        <div>
           <label htmlFor="target_date" className="block text-sm font-medium text-gray-700 mb-1">
             Fecha Objetivo <span className="text-red-500">*</span>
           </label>
@@ -311,9 +311,50 @@ export default function TaskForm({ taskToEdit, onSuccess, onError, onClose }: Ta
             name="target_date"
             defaultValue={taskToEdit?.target_date || ""}
             min={!taskToEdit ? today : undefined}
-            className={`w-full px-4 py-2.5 border rounded-xl text-sm text-gray-800 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-violet-400 transition-colors ${errors.target_date ? 'border-red-500' : 'border-gray-300'}`}
+            className={`w-full px-4 py-2.5 border rounded-xl text-sm text-gray-800 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-violet-400 ${errors.target_date ? 'border-red-500' : 'border-gray-300'}`}
           />
           {errors.target_date && <p className="text-red-500 text-xs mt-1">{errors.target_date}</p>}
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Prioridad <span className="text-red-500">*</span>
+        </label>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {PRIORITIES.map(p => (
+            <button
+              key={p}
+              type="button"
+              onClick={() => setSelectedPriority(p)}
+              className={`${baseButtonClasses} ${selectedPriority === p
+                ? priorityStyles[p]
+                : "border-gray-200 bg-white text-gray-500 hover:border-gray-300"}`}
+            >
+              {p}
+            </button>
+          ))}
+        </div>
+        {errors.priority && <p className="text-red-500 text-xs mt-1">{errors.priority}</p>}
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Estado <span className="text-red-500">*</span>
+        </label>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {STATUSES.map(s => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => setSelectedStatus(s)}
+              className={`${baseButtonClasses} ${selectedStatus === s
+                ? statusStyles[s]
+                : "border-gray-200 bg-white text-gray-500 hover:border-gray-300"}`}
+            >
+              {s}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -330,7 +371,7 @@ export default function TaskForm({ taskToEdit, onSuccess, onError, onClose }: Ta
                 key={tag.id}
                 type="button"
                 onClick={() => toggleTag(tag.id)}
-                className={`px-3 py-1 rounded-full text-xs font-medium border transition-all ${selected
+                className={`px-3 py-1 rounded-full text-xs font-medium border ${selected
                   ? "bg-violet-100 text-violet-700 border-violet-300"
                   : "bg-white text-gray-500 border-gray-200 hover:border-violet-300 hover:text-violet-600"
                   }`}
@@ -344,7 +385,7 @@ export default function TaskForm({ taskToEdit, onSuccess, onError, onClose }: Ta
             <button
               type="button"
               onClick={() => setShowTagInput(true)}
-              className="px-3 py-1 rounded-full text-xs font-medium border border-dashed border-gray-300 text-gray-400 hover:border-violet-400 hover:text-violet-600 flex items-center gap-1 transition-colors"
+              className="px-3 py-1 rounded-full text-xs font-medium border border-dashed border-gray-300 text-gray-400 hover:border-violet-400 hover:text-violet-600 flex items-center gap-1"
             >
               <Plus className="w-3 h-3" /> Nueva etiqueta
             </button>
@@ -388,7 +429,7 @@ export default function TaskForm({ taskToEdit, onSuccess, onError, onClose }: Ta
         <button
           type="button"
           onClick={onClose}
-          className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+          className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50"
         >
           Cancelar
         </button>
@@ -396,7 +437,7 @@ export default function TaskForm({ taskToEdit, onSuccess, onError, onClose }: Ta
         <button
           type="submit"
           disabled={loading || (projects.length === 0 && !loadingProjects)}
-          className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-purple-500 text-white text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-60 flex items-center justify-center"
+          className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-purple-500 text-white text-sm font-semibold hover:opacity-90 disabled:opacity-60 flex items-center justify-center"
         >
           {loading ? "Guardando..." : (taskToEdit ? "Actualizar" : "Guardar")}
         </button>

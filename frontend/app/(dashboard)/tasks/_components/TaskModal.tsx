@@ -49,7 +49,7 @@ export default function TaskModal({ isOpen, onClose, children }: TaskModalProps)
       >
         <div className="flex items-center justify-between p-6 border-b border-gray-100">
           <h3 id="modal-title" className="text-xl font-bold text-gray-900">
-            Nueva Tarea
+            Tarea
           </h3>
           <button
             onClick={onClose}
