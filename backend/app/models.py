@@ -104,6 +104,10 @@ class Task(Base):
     user = relationship("User")
     project = relationship("Project", back_populates="tasks")
 
+    @property
+    def project_name(self) -> str | None:
+        return self.project.name if self.project else None
+      
 class Revenue(Base):
     __tablename__ = "revenue_entries"
 
