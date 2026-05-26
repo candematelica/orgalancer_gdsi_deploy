@@ -44,14 +44,11 @@ export function useUpdateProject(
     setSaving(true);
     setError(null);
 
-    const token = localStorage.getItem("token");
-
     try {
       const res = await fetch(`/api/projects/${project!.id}`, {
         method: "PUT",
         headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
           name: formData.name,

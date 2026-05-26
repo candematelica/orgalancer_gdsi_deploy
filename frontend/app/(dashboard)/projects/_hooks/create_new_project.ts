@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 type ProjectFormData = {
   client_id: string;
   name: string;
-  contract_type: "hourly" | "fixed_price" | "retainer"; 
+  contract_type: "hourly" | "fixed_price" | "retainer";
   estimated_budget: number | null;
   deadline: Date | null;
 };
@@ -25,16 +25,11 @@ export function useCreateProjectForm() {
   const [loading, setLoading] = useState(false);
   const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
 
-  const getToken = () => localStorage.getItem("token");
-
   useEffect(() => {
     const fetchClients = async () => {
       try {
-        const token = getToken();
-        const response = await fetch("/api/clients", {
-          headers: { "Authorization": `Bearer ${token}` }
-        });
-        
+        const response = await fetch("/api/clients");
+
         if (!response.ok) throw new Error("No se pudieron cargar los clientes");
         const data = await response.json();
         setClients(data);
@@ -57,12 +52,10 @@ export function useCreateProjectForm() {
     setLoading(true);
 
     try {
-      const token = getToken();
       const response = await fetch("/api/projects", {
         method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}` 
+        headers: {
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
           client_id: formData.client_id,

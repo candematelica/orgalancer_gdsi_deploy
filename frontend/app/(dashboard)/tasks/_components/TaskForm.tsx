@@ -60,12 +60,7 @@ export default function TaskForm({ taskToEdit, onSuccess, onError, onClose }: Ta
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-        const token = localStorage.getItem("token");
-        if (!token) return;
-
-        const res = await fetch("/api/projects?state=active", {
-          headers: { "Authorization": `Bearer ${token}` },
-        });
+        const res = await fetch("/api/projects?state=active");
 
         if (res.ok) {
           const data = await res.json();
@@ -158,17 +153,13 @@ export default function TaskForm({ taskToEdit, onSuccess, onError, onClose }: Ta
         tag_ids: selectedTagIds,
       };
 
-      const token = localStorage.getItem("token");
-      if (!token) throw new Error("No estás autenticado");
-
       const url = taskToEdit ? `/api/tasks/${taskToEdit.id}` : "/api/tasks";
       const method = taskToEdit ? "PUT" : "POST";
 
       const response = await fetch(url, {
         method: method,
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
+          "Content-Type": "application/json"
         },
         body: JSON.stringify(payload)
       });
