@@ -39,14 +39,12 @@ export default function TasksPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [statusFilter, setStatusFilter] = useState("Todas");
-  const [projectFilter, setProjectFilter] = useState("Todos");
+const [statusFilter, setStatusFilter] = useState("Todos los Estados");  const [projectFilter, setProjectFilter] = useState("Todos");
   const [priorityFilter, setPriorityFilter] = useState("Todas");
   const [availableTags, setAvailableTags] = useState<TagItem[]>([]);
   const [selectedTagId, setSelectedTagId] = useState<string | null>(null);
 
-  const statusOptions = ["Todas", "Pendientes", "En Progreso", "Completadas", "Bloqueadas"];
-  const priorityOptions = ["Todas", "Baja", "Media", "Alta", "Urgente"];
+const statusOptions = ["Todos los Estados", "Pendientes", "En Progreso", "Completadas", "Bloqueadas"];  const priorityOptions = ["Todas", "Baja", "Media", "Alta", "Urgente"];
 
   const { setTask: setTimerTask, setIsOpen: setTimerOpen } = useTimerContext();
 
@@ -177,10 +175,10 @@ export default function TasksPage() {
 
   const filteredTasks = tasks.filter(task => {
     let matchStatus = true;
-    if (statusFilter === "Pendientes") matchStatus = task.status === "Pendiente";
-    else if (statusFilter === "En Progreso") matchStatus = task.status === "En Progreso";
-    else if (statusFilter === "Bloqueadas") matchStatus = task.status === "Bloqueada";
-    else if (statusFilter === "Completadas") matchStatus = task.status === "Completada";
+if (statusFilter === "Pendientes") matchStatus = task.status === "Pendiente";
+else if (statusFilter === "En Progreso") matchStatus = task.status === "En Progreso";
+else if (statusFilter === "Bloqueadas") matchStatus = task.status === "Bloqueada";
+else if (statusFilter === "Completadas") matchStatus = task.status === "Completada";
 
     const matchProject = projectFilter === "Todos" || task.project_id === projectFilter;
     const matchPriority = priorityFilter === "Todas" || task.priority === priorityFilter;
@@ -201,28 +199,14 @@ export default function TasksPage() {
         </button>
       </SectionHeader>
 
-      <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4 mb-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4 shadow-sm">
-        <div className="flex flex-wrap gap-1.5">
-          {statusOptions.map((f) => (
-            <button
-              key={f}
-              onClick={() => setStatusFilter(f)}
-              className={`px-4 py-1.5 rounded-xl text-sm transition-all ${statusFilter === f
-                ? "bg-white text-violet-700 font-semibold shadow border border-violet-100"
-                : "text-gray-500 hover:bg-white hover:text-gray-800"
-                }`}
-            >
-              {f}
-            </button>
-          ))}
-        </div>
-
-        {/* Filtros por Proyecto y Prioridad */}
+      <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4 mb-6 flex flex-col lg:flex-row lg:items-center justify-start gap-4 shadow-sm">
         <div className="flex flex-wrap sm:flex-nowrap items-center gap-3">
           <div className="flex items-center gap-2 text-gray-400 text-xs font-medium uppercase tracking-wider mr-1">
             <SlidersHorizontal size={14} />
             <span>Filtros:</span>
           </div>
+
+          
 
           {/* Selector de Proyectos */}
           <select
@@ -244,6 +228,16 @@ export default function TasksPage() {
           >
             <option value="Todas">Todas las Prioridades</option>
             {priorityOptions.filter(o => o !== "Todas").map(o => (
+              <option key={o} value={o}>{o}</option>
+            ))}
+          </select>
+          {/* Selector de Estado */}
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-3 py-1.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-violet-400 cursor-pointer min-w-[140px]"
+          >
+            {statusOptions.map(o => (
               <option key={o} value={o}>{o}</option>
             ))}
           </select>
