@@ -74,18 +74,13 @@ const statusOptions = ["Todos los Estados", "Pendientes", "En Progreso", "Comple
   }, [selectedTagId]);
 
   const fetchTags = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) return;
-      const res = await fetch("/api/tasks/tags", {
-        headers: { "Authorization": `Bearer ${token}` },
-      });
-      if (res.ok) setAvailableTags(await res.json());
-    } catch (error) {
-      console.error("Error fetching tags:", error);
-    }
-  };
-
+  try {
+    const res = await fetch("/api/tasks/tags");
+    if (res.ok) setAvailableTags(await res.json());
+  } catch (error) {
+    console.error("Error fetching tags:", error);
+  }
+};
   useEffect(() => {
     fetchData();
   }, [fetchData]);
