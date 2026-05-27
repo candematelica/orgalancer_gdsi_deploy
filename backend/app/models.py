@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, Float, ForeignKey, Date, Numeric, Table
+from sqlalchemy import Column, String, Float, ForeignKey, Date, Numeric, Boolean, Table
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import relationship
 from app.database import Base
@@ -52,6 +52,7 @@ class Client(Base):
     address = Column(String, nullable=True)
     website = Column(String, nullable=True)
     extra_info = Column(String, nullable=True)
+    is_deleted = Column(Boolean, nullable=False, default=False)
 
     projects = relationship("Project", back_populates="client")
 

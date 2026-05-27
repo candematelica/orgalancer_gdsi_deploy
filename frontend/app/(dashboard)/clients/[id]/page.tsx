@@ -21,6 +21,8 @@ export default function ClientDetailPage() {
   const [client, setClient] = useState<Client | null>(null);
   const [loading, setLoading] = useState(true);
   const [editModalOpen, setEditModalOpen] = useState(false);
+  const [deleteModal, setDeleteModal] = useState<"none" | "confirm" | "warning">("none");
+  const [deleting, setDeleting] = useState(false);
 
   const fetchClient = useCallback(async () => {
     try {
@@ -42,6 +44,33 @@ export default function ClientDetailPage() {
   useEffect(() => {
     fetchClient();
   }, [fetchClient]);
+
+  const handleDeleteClick = async () => {
+    try {
+      const res = await fetch(`/api/projects?client_id=${params.id}&state=active`);
+      const data = await res.json();
+      const hasActiveProjects = Array.isArray(data) && data.length > 0;
+      setDeleteModal(hasActiveProjects ? "warning" : "confirm");
+    } catch {
+      setDeleteModal("confirm");
+    }
+  };
+
+  const handleDeleteConfirm = async (action: "cancel" | "complete") => {
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/clients/${params.id}?action=${action}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        router.push("/clients");
+      }
+    } catch (error) {
+      console.error("Error eliminando cliente", error);
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -78,6 +107,12 @@ export default function ClientDetailPage() {
             className="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-purple-500 text-white text-sm font-semibold hover:opacity-90 transition-opacity shadow"
           >
             Editar
+          </button>
+          <button
+            onClick={handleDeleteClick}
+            className="px-4 py-2 rounded-xl border border-red-200 text-red-500 text-sm font-semibold hover:bg-red-50 transition-colors"
+          >
+            Eliminar
           </button>
         </div>
         <p className="text-sm text-gray-400 mt-0.5">{client.client_type}</p>
@@ -188,6 +223,80 @@ export default function ClientDetailPage() {
           }}
           clientToEdit={client}
         />
+      )}
+
+      {deleteModal === "confirm" && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-xl p-8 max-w-sm w-full mx-4">
+            <h2 className="text-lg font-bold text-gray-800 mb-2">¿Eliminar cliente?</h2>
+            <p className="text-sm text-gray-500 mb-6">
+              Estás por eliminar a{" "}
+              <span className="font-semibold text-gray-700">{client.name}</span>.
+              Esta acción no se puede deshacer.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setDeleteModal("none")}
+                disabled={deleting}
+                className="px-5 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => handleDeleteConfirm("cancel")}
+                disabled={deleting}
+                className="px-5 py-2 rounded-xl bg-red-500 text-white text-sm font-semibold hover:bg-red-600 transition-colors disabled:opacity-50"
+              >
+                {deleting ? "Eliminando..." : "Eliminar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteModal === "warning" && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full mx-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
+                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" className="text-amber-500">
+                  <path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+              <h2 className="text-lg font-bold text-gray-800">Este cliente tiene proyectos activos</h2>
+            </div>
+            <p className="text-sm text-gray-500 mb-6">
+              Para eliminar a{" "}
+              <span className="font-semibold text-gray-700">{client.name}</span>{" "}
+              tenés que decidir qué hacer con sus proyectos activos.
+            </p>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => handleDeleteConfirm("cancel")}
+                disabled={deleting}
+                className="w-full px-5 py-3 rounded-xl bg-red-500 text-white text-sm font-semibold hover:bg-red-600 transition-colors disabled:opacity-50 text-left"
+              >
+                <span className="block font-bold">Cancelar proyectos y eliminar cliente</span>
+                <span className="block text-xs text-red-100 mt-0.5">Los proyectos activos pasarán a estado &quot;cancelado&quot;</span>
+              </button>
+              <button
+                onClick={() => handleDeleteConfirm("complete")}
+                disabled={deleting}
+                className="w-full px-5 py-3 rounded-xl bg-green-500 text-white text-sm font-semibold hover:bg-green-600 transition-colors disabled:opacity-50 text-left"
+              >
+                <span className="block font-bold">Finalizar proyectos y eliminar cliente</span>
+                <span className="block text-xs text-green-100 mt-0.5">Los proyectos activos pasarán a estado &quot;finalizado&quot;</span>
+              </button>
+              <button
+                onClick={() => setDeleteModal("none")}
+                disabled={deleting}
+                className="w-full px-5 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+              >
+                Cancelar operación
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
