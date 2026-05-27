@@ -79,11 +79,12 @@ useEffect(() => {
     setSaving(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE}/time-entries`, {
+      const token = localStorage.getItem("token");
+      console.log("TOKEN:", token);
+      const res = await fetch(`/api/time-entries`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
         body: JSON.stringify({
           project_id: projectId,

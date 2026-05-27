@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { API_BASE } from "../../tasks/_lib/api";
 
 export interface ProjectTimeEntry {
   id:               string;
@@ -10,13 +9,6 @@ export interface ProjectTimeEntry {
   description:      string;
   source:           "manual" | "timer";
   task_name?:       string | null;
-}
-
-function authHeaders() {
-  return {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${localStorage.getItem("token")}`,
-  };
 }
 
 export function useProjectTimeHistory(projectId: string, refreshKey?: number) {
@@ -36,7 +28,7 @@ export function useProjectTimeHistory(projectId: string, refreshKey?: number) {
   const fetchEntries = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/time-entries?project_id=${projectId}`, { headers: authHeaders() });
+      const res = await fetch(`/api/time-entries?project_id=${projectId}`);
       if (res.ok) setEntries(await res.json());
     } finally {
       setLoading(false);
@@ -61,9 +53,9 @@ export function useProjectTimeHistory(projectId: string, refreshKey?: number) {
     if (duration_minutes <= 0) return;
     setSaving(true);
     try {
-      const res = await fetch(`${API_BASE}/time-entries/${editEntry.id}`, {
+      const res = await fetch(`/api/time-entries/${editEntry.id}`, {
         method: "PUT",
-        headers: authHeaders(),
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ entry_date: editDate, duration_minutes, description: editDesc }),
       });
       if (res.ok) {
@@ -81,7 +73,7 @@ export function useProjectTimeHistory(projectId: string, refreshKey?: number) {
 
   const confirmDelete = async () => {
     if (!deleteId) return;
-    await fetch(`${API_BASE}/time-entries/${deleteId}`, { method: "DELETE", headers: authHeaders() });
+    await fetch(`/api/time-entries/${deleteId}`, { method: "DELETE" });
     setEntries((prev) => prev.filter((e) => e.id !== deleteId));
     setDeleteId(null);
   };

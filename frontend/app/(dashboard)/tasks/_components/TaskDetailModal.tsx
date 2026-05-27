@@ -1,8 +1,13 @@
 "use client";
 
-import { Calendar, FolderOpen, Clock } from "lucide-react";
+import { Calendar, FolderOpen, Clock, Tag } from "lucide-react";
 import TimeHistory from "./TimeHistory";
 import { useTaskDetailModal } from "../_hooks/use_task_detail_modal";
+
+interface TagItem {
+  id: string;
+  name: string;
+}
 
 interface Task {
   id:           string;
@@ -13,6 +18,7 @@ interface Task {
   project_id:   string;
   project_name: string | null;
   status:       string;
+  tags:         TagItem[];
 }
 
 interface Props {
@@ -24,16 +30,17 @@ interface Props {
 }
 
 const statusColors: Record<string, string> = {
-  "Pendiente":   "text-gray-500 bg-gray-100",
-  "En Progreso": "text-yellow-700 bg-yellow-100",
-  "Completada":  "text-green-700 bg-green-100",
+  "Pendiente":   "text-gray-600 bg-gray-100 border-gray-200",
+  "En Progreso": "text-yellow-700 bg-yellow-100 border-yellow-200",
+  "Bloqueada":   "text-orange-700 bg-orange-100 border-orange-200",
+  "Completada":  "text-green-700 bg-green-100 border-green-200",
 };
 
 const priorityColors: Record<string, string> = {
-  Baja:    "text-green-700 bg-green-100",
-  Media:   "text-yellow-700 bg-yellow-100",
-  Alta:    "text-red-700 bg-red-100",
-  Urgente: "text-red-800 bg-red-200",
+  Baja:    "text-green-700 bg-green-100 border-green-200",
+  Media:   "text-yellow-700 bg-yellow-100 border-yellow-200",
+  Alta:    "text-red-700 bg-red-100 border-red-200",
+  Urgente: "text-red-800 bg-red-200 border-red-300",
 };
 
 export default function TaskDetailModal({ task, onClose, onDelete, onEdit, timeRefreshKey = 0 }: Props) {
@@ -56,11 +63,11 @@ export default function TaskDetailModal({ task, onClose, onDelete, onEdit, timeR
           <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
             <div>
               <div className="flex items-center gap-2 mb-3">
-                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[task.status]}`}>
+                <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${statusColors[task.status]}`}>
                   {task.status}
                 </span>
-                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${priorityColors[task.priority]}`}>
-                  {task.priority}
+                <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${priorityColors[task.priority]}`}>
+                  Prioridad {task.priority}
                 </span>
               </div>
               <h2 className="text-xl font-bold text-gray-800 leading-tight pr-4">{task.title}</h2>
@@ -76,8 +83,28 @@ export default function TaskDetailModal({ task, onClose, onDelete, onEdit, timeR
           <div className="px-6 py-5 space-y-6 flex-1">
             <div>
               <h3 className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Descripción</h3>
-              <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{task.description}</p>
+              <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
+                {task.description || "Sin descripción."}
+              </p>
             </div>
+
+            {task.tags && task.tags.length > 0 && (
+              <div>
+                <h3 className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                  <Tag className="w-3.5 h-3.5" /> Etiquetas
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {task.tags.map(tag => (
+                    <span
+                      key={tag.id}
+                      className="px-3 py-1 rounded-full text-xs font-medium bg-violet-100 text-violet-700 border border-violet-200"
+                    >
+                      {tag.name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-gray-50 rounded-xl p-4 flex items-start gap-3">
@@ -109,26 +136,26 @@ export default function TaskDetailModal({ task, onClose, onDelete, onEdit, timeR
             </div>
           </div>
 
-        {/* Footer Buttons */}
-        <div className="flex gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50/50 rounded-b-2xl">
-          <button
-            onClick={handleDelete}
-            disabled={isDeleting}
-            className="flex-1 py-2.5 rounded-xl bg-white border border-red-200 text-red-600 text-sm font-semibold hover:bg-red-50 transition-colors disabled:opacity-60"
-          >
-            {isDeleting ? "Eliminando..." : "Eliminar"}
-          </button>
-          <button
-            onClick={() => onEdit(task)}
-            className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-purple-500 text-white text-sm font-semibold hover:opacity-90 transition-opacity shadow-sm"
-          >
-            Editar
-          </button>
-        </div>
+          {/* Footer Buttons */}
+          <div className="flex gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50/50 rounded-b-2xl">
+            <button
+              onClick={openDeleteConfirm}
+              disabled={isDeleting}
+              className="flex-1 py-2.5 rounded-xl bg-white border border-red-200 text-red-600 text-sm font-semibold hover:bg-red-50 transition-colors disabled:opacity-60"
+            >
+              {isDeleting ? "Eliminando..." : "Eliminar"}
+            </button>
+            <button
+              onClick={() => onEdit(task)}
+              className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-purple-500 text-white text-sm font-semibold hover:opacity-90 transition-opacity shadow-sm"
+            >
+              Editar
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Confirm delete */}
+      {/* Confirm delete dialog */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[200] p-4">
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl">
@@ -141,8 +168,11 @@ export default function TaskDetailModal({ task, onClose, onDelete, onEdit, timeR
               <button onClick={closeDeleteConfirm} className="px-4 py-2 rounded-xl text-sm text-gray-500 hover:bg-gray-50">
                 Cancelar
               </button>
-              <button onClick={handleDelete} disabled={isDeleting}
-                className="px-4 py-2 rounded-xl bg-red-500 text-white text-sm font-medium hover:bg-red-600 disabled:opacity-60">
+              <button
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="px-4 py-2 rounded-xl bg-red-500 text-white text-sm font-medium hover:bg-red-600 disabled:opacity-60"
+              >
                 {isDeleting ? "Eliminando..." : "Eliminar"}
               </button>
             </div>

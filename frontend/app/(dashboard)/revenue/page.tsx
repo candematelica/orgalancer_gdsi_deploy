@@ -8,6 +8,9 @@ import TransactionList, { type Transaction } from "./_components/transaction_lis
 import RegisterIncomeModal from "./_components/register_income_modal";
 import { useRevenue } from "./_hooks/use_revenue";
 
+import ReceiptDetailModal from "./../_receipts/_components/receipt_detail_modal"
+import { type Receipt } from "./../_receipts/types";
+
 interface SelectOption { id: string; name: string; }
 
 function useOptions(apiPath: string): SelectOption[] {
@@ -32,6 +35,8 @@ export default function RevenuePage() {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
 
+  const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
+
   const clients  = useOptions("/api/clients");
   const projects = useOptions("/api/projects");
 
@@ -40,6 +45,19 @@ export default function RevenuePage() {
   const monetary = transactions.filter((t) => t.payment_type === "monetario").reduce((s, t) => s + t.amount, 0);
   const barter   = transactions.filter((t) => t.payment_type === "canje").reduce((s, t) => s + t.amount, 0);
   const total    = monetary + barter;
+
+  const handleViewReceipt = async (receiptId: string) => {
+    const token = localStorage.getItem("token");
+    try {
+      const res = await fetch(`/api/receipts/${receiptId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (res.ok) setSelectedReceipt(data);
+    } catch (err) {
+      console.error("Error al cargar el recibo", err);
+    }
+  };
 
   async function handleSave(tx: Omit<Transaction, "id">) {
     if (editingTx) {
@@ -192,6 +210,14 @@ export default function RevenuePage() {
           transactions={transactions}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          onViewReceipt={handleViewReceipt}
+        />
+      )}
+
+      {selectedReceipt && (
+        <ReceiptDetailModal 
+          receipt={selectedReceipt} 
+          onClose={() => setSelectedReceipt(null)} 
         />
       )}
 

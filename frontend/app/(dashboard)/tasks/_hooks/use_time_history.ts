@@ -14,7 +14,6 @@ export interface TimeEntry {
 function authHeaders() {
   return {
     "Content-Type": "application/json",
-    Authorization: `Bearer ${localStorage.getItem("token")}`,
   };
 }
 
@@ -35,7 +34,7 @@ export function useTimeHistory(taskId: string, refreshKey?: number) {
   const fetchEntries = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/time-entries?task_id=${taskId}`, { headers: authHeaders() });
+      const res = await fetch(`/api/time-entries?task_id=${taskId}`, { headers: authHeaders() });
       if (res.ok) setEntries(await res.json());
     } finally {
       setLoading(false);
@@ -60,7 +59,7 @@ export function useTimeHistory(taskId: string, refreshKey?: number) {
     if (duration_minutes <= 0) return;
     setSaving(true);
     try {
-      const res = await fetch(`${API_BASE}/time-entries/${editEntry.id}`, {
+      const res = await fetch(`/api/time-entries/${editEntry.id}`, {
         method: "PUT",
         headers: authHeaders(),
         body: JSON.stringify({ entry_date: editDate, duration_minutes, description: editDesc }),
@@ -80,7 +79,7 @@ export function useTimeHistory(taskId: string, refreshKey?: number) {
 
   const confirmDelete = async () => {
     if (!deleteId) return;
-    await fetch(`${API_BASE}/time-entries/${deleteId}`, { method: "DELETE", headers: authHeaders() });
+    await fetch(`/api/time-entries/${deleteId}`, { method: "DELETE", headers: authHeaders() });
     setEntries((prev) => prev.filter((e) => e.id !== deleteId));
     setDeleteId(null);
   };

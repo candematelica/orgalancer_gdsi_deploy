@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, FileText } from "lucide-react";
 
 export interface Transaction {
   id: string;
@@ -12,6 +12,7 @@ export interface Transaction {
   currency: string;
   payment_type: "monetario" | "canje";
   payment_method: string;
+  receipt_id?: string | null;
   date: string;
   description?: string;
 }
@@ -19,6 +20,7 @@ export interface Transaction {
 interface Props {
   transactions: Transaction[];
   onEdit?: (tx: Transaction) => void;
+  onViewReceipt?: (receiptId: string) => void;
   onDelete?: (id: string) => void;
 }
 
@@ -35,7 +37,7 @@ function formatDate(dateStr: string) {
   return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
 }
 
-export default function TransactionList({ transactions, onEdit, onDelete }: Props) {
+export default function TransactionList({ transactions, onEdit, onDelete, onViewReceipt }: Props) {
   if (transactions.length === 0) {
     return (
       <div className="text-center py-12 text-gray-400 text-sm">
@@ -79,8 +81,22 @@ export default function TransactionList({ transactions, onEdit, onDelete }: Prop
             </div>
 
             {/* Actions */}
-            {(onEdit || onDelete) && (
-              <div className="flex gap-1 flex-shrink-0 ml-2">
+            {(onEdit || onDelete || onViewReceipt) && (
+              <div className="flex gap-1 flex-shrink-0 ml-2 items-center">
+                <div className="w-8 h-8 flex items-center justify-center">
+                  {tx.receipt_id && onViewReceipt ? (
+                    <button
+                      onClick={() => onViewReceipt(tx.receipt_id!)}
+                      title="Ver recibo asociado"
+                      className="p-1.5 text-violet-500 hover:text-violet-700 hover:bg-violet-50 rounded-lg transition"
+                    >
+                      <FileText size={14} />
+                    </button>
+                  ) : (
+                    <div className="w-8 h-8" />
+                  )}
+                </div>
+
                 {onEdit && (
                   <button
                     onClick={() => onEdit(tx)}

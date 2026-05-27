@@ -30,11 +30,10 @@ export function useManualEntry({ fixedProjectId, fixedTaskId, onSaved }: UseManu
 
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/time-entries`, {
+      const res = await fetch(`/api/time-entries`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
         body: JSON.stringify({
           project_id:       fixedProjectId,

@@ -46,6 +46,7 @@ export default function ProjectsGrid({
   onNewProject,
   onEdit,
   onStartTimer,
+  onStateChange,
 }: ProjectsGridProps) {
   if (loading) {
     return viewMode === "grid" ? (
@@ -76,7 +77,14 @@ export default function ProjectsGrid({
     return (
       <div className="flex flex-col gap-3">
         {projects.map((project) => (
-          <ProjectListRow key={project.id} project={project} currency={currency} onEdit={onEdit} />
+          <ProjectListRow
+            key={project.id}
+            project={project}
+            currency={currency}
+            onEdit={onEdit}
+            onStateChange={onStateChange}
+            onStartTimer={onStartTimer}
+          />
         ))}
       </div>
     );
@@ -85,7 +93,14 @@ export default function ProjectsGrid({
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
       {projects.map((project) => (
-        <ProjectCard key={project.id} project={project} currency={currency} onEdit={onEdit} onStartTimer={onStartTimer} />
+        <ProjectCard
+          key={project.id}
+          project={project}
+          currency={currency}
+          onEdit={onEdit}
+          onStateChange={onStateChange}
+          onStartTimer={onStartTimer}
+        />
       ))}
     </div>
   );
