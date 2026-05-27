@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Calendar, FolderOpen } from "lucide-react";
+import { Calendar, FolderOpen, Tag } from "lucide-react";
+
+interface TagItem {
+  id: string;
+  name: string;
+}
 
 interface Task {
   id: string;
@@ -12,6 +17,7 @@ interface Task {
   project_id: string;
   project_name: string | null;
   status: string;
+  tags: TagItem[];
 }
 
 interface Props {
@@ -42,16 +48,17 @@ export default function TaskDetailModal({ task, onClose, onDelete, onEdit }: Pro
   };
 
   const priorityColors: Record<string, string> = {
-    Baja: "bg-green-100 text-green-700",
-    Media: "bg-yellow-100 text-yellow-700",
-    Alta: "bg-red-100 text-red-700",
-    Urgente: "bg-red-200 text-red-800",
+    Baja: "bg-green-100 text-green-700 border-green-200",
+    Media: "bg-yellow-100 text-yellow-700 border-yellow-200",
+    Alta: "bg-red-100 text-red-700 border-red-200",
+    Urgente: "bg-red-200 text-red-800 border-red-300",
   };
 
   const statusColors: Record<string, string> = {
-    "Pendiente": "text-gray-500 bg-gray-100",
-    "En Progreso": "text-yellow-700 bg-yellow-100",
-    "Completada": "text-green-700 bg-green-100",
+    "Pendiente": "text-gray-600 bg-gray-100 border-gray-200",
+    "En Progreso": "text-yellow-700 bg-yellow-100 border-yellow-200",
+    "Bloqueada": "text-orange-700 bg-orange-100 border-orange-200",
+    "Completada": "text-green-700 bg-green-100 border-green-200",
   };
 
   return (
@@ -64,11 +71,11 @@ export default function TaskDetailModal({ task, onClose, onDelete, onEdit }: Pro
         <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[task.status]}`}>
+              <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${statusColors[task.status]}`}>
                 {task.status}
               </span>
-              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${priorityColors[task.priority]}`}>
-                {task.priority}
+              <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${priorityColors[task.priority]}`}>
+                Prioridad {task.priority}
               </span>
             </div>
             <h2 className="text-xl font-bold text-gray-800 leading-tight pr-4">
@@ -92,11 +99,30 @@ export default function TaskDetailModal({ task, onClose, onDelete, onEdit }: Pro
               Descripción
             </h3>
             <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
-              {task.description}
+              {task.description || "Sin descripción."}
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          {task.tags && task.tags.length > 0 && (
+            <div>
+              <h3 className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                <Tag className="w-3.5 h-3.5" /> Etiquetas
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {task.tags.map(tag => (
+                  <span
+                    key={tag.id}
+                    className="px-3 py-1 rounded-full text-xs font-medium bg-violet-100 text-violet-700 border border-violet-200"
+                  >
+                    {tag.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Grid de Información Detallada */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="bg-gray-50 rounded-xl p-4 flex items-start gap-3">
               <div className="bg-white p-2 rounded-lg shadow-sm">
                 <Calendar className="w-5 h-5 text-gray-500" />
