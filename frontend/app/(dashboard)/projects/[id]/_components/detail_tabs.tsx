@@ -1,26 +1,28 @@
 "use client";
 
-export type DetailTab = "overview" | "budgets" | "tasks" | "documents" | "notes";
+export type DetailTab = "overview" | "budgets" | "tasks" | "documents" | "receipts" | "notes";
 
 interface TabConfig {
-  key: DetailTab;
-  label: string;
+  key:    DetailTab;
+  label:  string;
   count?: number;
 }
 
 interface Props {
-  activeTab: DetailTab;
-  onChange: (tab: DetailTab) => void;
-  taskCount: number;
+  activeTab:     DetailTab;
+  onChange:      (tab: DetailTab) => void;
+  taskCount:     number;
+  receiptCount?: number;
 }
 
-export default function DetailTabs({ activeTab, onChange, taskCount }: Props) {
+export default function DetailTabs({ activeTab, onChange, taskCount, receiptCount }: Props) {
   const tabs: TabConfig[] = [
-    { key: "overview",   label: "Vista General" },
-    { key: "budgets",    label: "Presupuestos" },
-    { key: "tasks",      label: "Tareas", count: taskCount },
-    { key: "documents",  label: "Documentos" },
-    { key: "notes",      label: "Notas" },
+    { key: "overview",  label: "Vista General" },
+    { key: "budgets",   label: "Presupuestos"  },
+    { key: "tasks",     label: "Tareas",    count: taskCount     },
+    { key: "documents", label: "Documentos"                      },
+    { key: "receipts",  label: "Recibos",   count: receiptCount  },
+    { key: "notes",     label: "Notas"                           },
   ];
 
   return (
