@@ -3,17 +3,20 @@ import { parseBody, extractErrorMsg } from "../utils";
 
 export async function GET(req: NextRequest) {
   try {
+    const token = req.cookies.get("token")?.value;
+
     const { searchParams } = new URL(req.url);
     const backendUrl = new URL(`${process.env.API_URL}/revenue`);
 
-    // Forward all filter params: client_id, project_id, from, to
     for (const [key, value] of searchParams.entries()) {
       backendUrl.searchParams.set(key, value);
     }
 
-    const token = req.headers.get("Authorization");
     const response = await fetch(backendUrl.toString(), {
-      headers: { "Content-Type": "application/json", Authorization: token || "" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: token ? `Bearer ${token}` : "",
+      },
       cache: "no-store",
     });
 
@@ -33,12 +36,15 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const token = req.headers.get("Authorization");
+    const token = req.cookies.get("token")?.value;
     const body = await req.json();
 
     const response = await fetch(`${process.env.API_URL}/revenue`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: token || "" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: token ? `Bearer ${token}` : "",
+      },
       body: JSON.stringify(body),
     });
 

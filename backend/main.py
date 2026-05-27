@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
-from app.routers import auth, user_profile, financial_profile, clients, tasks, projects, revenue, tags
+from app.routers import auth, user_profile, financial_profile, clients, tasks, projects, revenue, receipts, tags
 from app.routers.tariff_suggestion import router as tariff_router
 from app.database import engine, Base
 import app.models
@@ -56,6 +56,7 @@ app.include_router(projects.router)
 app.include_router(tasks.router)
 app.include_router(tags.router)
 app.include_router(revenue.router)
+app.include_router(receipts.router)
 
 @app.get("/health")
 def health():
