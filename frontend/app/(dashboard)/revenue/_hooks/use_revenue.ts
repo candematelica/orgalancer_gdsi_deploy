@@ -27,6 +27,9 @@ function toTransaction(raw: any): Transaction {
     payment_method: raw.payment_method ?? raw.payment_type,
     date: raw.date,
     description: raw.description ?? undefined,
+    project_id:     raw.project_id  ?? null,
+    client_id:      raw.client_id   ?? null,
+    receipt_id:     raw.receipt_id  ?? null,
   };
 }
 
@@ -37,7 +40,29 @@ export function useRevenue() {
   const [error, setError] = useState<string | null>(null);
   const [currency, setCurrency] = useState("$");
 
-  const getToken = () => localStorage.getItem("token");
+  const load = useCallback(async (filters: RevenueFilters = {}) => {
+
+    setLoading(true);
+    setError(null);
+    try {
+      const url = new URL("/api/revenue", window.location.origin);
+      if (filters.client_id)  url.searchParams.set("client_id",  filters.client_id);
+      if (filters.project_id) url.searchParams.set("project_id", filters.project_id);
+      if (filters.from)       url.searchParams.set("from",        filters.from);
+      if (filters.to)         url.searchParams.set("to",          filters.to);
+
+      const res = await fetch(url.toString(), {
+        cache: "no-store",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Error al cargar ingresos");
+      setTransactions(data.map(toTransaction));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error desconocido");
+    } finally {
+      setLoading(false);
+    }
+  }, [router]);
 
   // Fetch currency from user's financial config
   useEffect(() => {
@@ -55,44 +80,11 @@ export function useRevenue() {
       .catch(() => {});
   }, []);
 
-  const load = useCallback(async (filters: RevenueFilters = {}) => {
-    const token = getToken();
-    if (!token) { router.push("/login"); return; }
-
-    setLoading(true);
-    setError(null);
-    try {
-      const url = new URL("/api/revenue", window.location.origin);
-      if (filters.client_id)  url.searchParams.set("client_id",  filters.client_id);
-      if (filters.project_id) url.searchParams.set("project_id", filters.project_id);
-      if (filters.from)       url.searchParams.set("from",        filters.from);
-      if (filters.to)         url.searchParams.set("to",          filters.to);
-
-      const res = await fetch(url.toString(), {
-        headers: { Authorization: `Bearer ${token}` },
-        cache: "no-store",
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Error al cargar ingresos");
-      setTransactions(data.map(toTransaction));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error desconocido");
-    } finally {
-      setLoading(false);
-    }
-  }, [router]);
-
   async function save(tx: Omit<Transaction, "id">): Promise<boolean> {
-    const token = getToken();
-    if (!token) return false;
-
     try {
       const res = await fetch("/api/revenue", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: {"Content-Type": "application/json",},
         body: JSON.stringify({
           amount: tx.amount,
           currency: tx.currency,
@@ -102,11 +94,12 @@ export function useRevenue() {
           description: tx.description ?? null,
           project_id: tx.project_id ?? null,
           client_id: tx.client_id ?? null,
+          receipt_id: tx.receipt_id ?? null,
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      // Agrega la nueva transacción al inicio con los datos enriquecidos del backend
+      
       setTransactions((prev) => [toTransaction(data), ...prev]);
       return true;
     } catch (err) {
@@ -116,27 +109,34 @@ export function useRevenue() {
   }
 
   async function update(id: string, tx: Omit<Transaction, "id">): Promise<boolean> {
-    const token = getToken();
-    if (!token) return false;
-
     try {
+      const payload = {
+        amount:         tx.amount,
+        currency:       tx.currency,
+        date:           tx.date,
+        payment_type:   tx.payment_type,
+        payment_method: tx.payment_method,
+        description:    tx.description    ?? null,
+        project_id:     tx.project_id     ?? null,
+        client_id:      tx.client_id      ?? null,
+        receipt_id:     tx.receipt_id     ?? null,
+      };
+
+      const cleanPayload = Object.fromEntries(
+        Object.entries(payload).filter(([_, v]) => v !== undefined)
+      );
+
       const res = await fetch(`/api/revenue/${id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          amount:         tx.amount,
-          currency:       tx.currency,
-          date:           tx.date,
-          payment_type:   tx.payment_type,
-          payment_method: tx.payment_method,
-          description:    tx.description ?? null,
-          project_id:     tx.project_id ?? null,
-          client_id:      tx.client_id  ?? null,
-        }),
+        headers: { "Content-Type": "application/json"},
+        body: JSON.stringify(cleanPayload),
       });
+
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
+
       setTransactions((prev) => prev.map((t) => (t.id === id ? toTransaction(data) : t)));
+      
       return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al actualizar");
@@ -145,13 +145,9 @@ export function useRevenue() {
   }
 
   async function remove(id: string): Promise<boolean> {
-    const token = getToken();
-    if (!token) return false;
-
     try {
       const res = await fetch(`/api/revenue/${id}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) {
         const data = await res.json();

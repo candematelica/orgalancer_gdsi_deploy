@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import Optional
 from datetime import date
 from app.database import get_db
-from app.models import Revenue, Project, Client, User
+from app.models import Revenue, Project, Client, User, Receipt, ReceiptStatus
 from app.schemas.revenue import RevenueCreate, RevenueResponse, RevenueUpdate
 from app.routers.auth import get_current_user
 
@@ -32,10 +32,26 @@ def create_revenue(
         if not client:
             raise HTTPException(status_code=404, detail="Cliente no encontrado")
 
+    # validate receipt belongs to this user (if provided)
+    receipt = None
+    if revenue.receipt_id:
+        receipt = db.query(Receipt).filter(
+            Receipt.id == revenue.receipt_id,
+            Receipt.user_id == current_user.id,
+        ).first()
+        if not receipt:
+            raise HTTPException(status_code=404, detail="Recibo no encontrado")
+
     entry = Revenue(**revenue.model_dump(), user_id=current_user.id)
     db.add(entry)
     db.commit()
     db.refresh(entry)
+
+    # close the receipt automatically once linked to a payment
+    if receipt:
+        receipt.status = ReceiptStatus.paid
+        db.commit()
+
     return _enrich(entry, db)
 
 
@@ -91,6 +107,28 @@ def update_revenue(
     if not entry:
         raise HTTPException(status_code=404, detail="Ingreso no encontrado")
 
+    # handle receipt association change
+    if "receipt_id" in data.model_fields_set:
+        old_id = entry.receipt_id
+        new_id = data.receipt_id
+
+        if old_id != new_id:
+            # old receipt goes back to pending
+            if old_id:
+                old_r = db.query(Receipt).filter(Receipt.id == old_id).first()
+                if old_r:
+                    old_r.status = ReceiptStatus.pending
+
+            # mark new receipt as paid
+            if new_id:
+                new_r = db.query(Receipt).filter(
+                    Receipt.id == new_id,
+                    Receipt.user_id == current_user.id,
+                ).first()
+                if not new_r:
+                    raise HTTPException(status_code=404, detail="Recibo no encontrado")
+                new_r.status = ReceiptStatus.paid
+
     for field, value in data.model_dump(exclude_unset=True).items():
         setattr(entry, field, value)
 
@@ -138,6 +176,7 @@ def _enrich(entry: Revenue, db: Session) -> RevenueResponse:
         description=entry.description,
         project_id=entry.project_id,
         client_id=entry.client_id,
+        receipt_id=entry.receipt_id,
         project_name=project_name,
         client_name=client_name,
     )
