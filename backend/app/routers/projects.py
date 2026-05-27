@@ -77,7 +77,8 @@ def get_project_stats(
 
 @router.get("/", response_model=List[ProjectListItem])
 def list_projects(
-        state: Optional[ProjectState] = Query(None, description="active | completed | cancelled"),
+        state: Optional[ProjectState] = Query(None),
+        client_id: Optional[str] = Query(None),  # ← agregar
         db: Session = Depends(get_db),
         current_user: User = Depends(get_current_user),
 ):
@@ -88,9 +89,10 @@ def list_projects(
     )
     if state:
         query = query.filter(Project.state == state)
+    if client_id:                                           # ← agregar
+        query = query.filter(Project.client_id == client_id)
 
     return [_to_list_item(p) for p in query.order_by(Project.deadline.asc()).all()]
-
 
 @router.get("/{project_id}", response_model=ProjectListItem)
 def get_project(
