@@ -38,7 +38,7 @@ export async function DELETE(
 
     const response = await fetch(`${process.env.API_URL}/tasks/${id}`, {
       method: "DELETE",
-      headers: { "Authorization": token || "" },
+      headers: { "Content-Type": "application/json", Authorization: token ? `Bearer ${token}` : "" },
     });
 
     if (!response.ok) {
@@ -60,7 +60,7 @@ export async function PUT(
 ) {
   try {
     const { id } = await params;
-    const token = req.headers.get("Authorization");
+    const token = req.cookies.get("token")?.value;
     const body = await req.json();
 
     const response = await fetch(`${process.env.API_URL}/tasks/${id}`, {

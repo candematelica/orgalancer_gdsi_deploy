@@ -1,11 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Clock, Check, Circle, CheckCircle, Calendar, LayoutList, FolderOpen, SlidersHorizontal } from "lucide-react";
-import SectionHeader from "./../_components/section_header"
+import { useState, useEffect, useCallback } from "react";
+import { AlertOctagon, Clock, Check, Circle, CheckCircle, Calendar, LayoutList, FolderOpen, Tag, SlidersHorizontal } from "lucide-react";
+import SectionHeader from "./../_components/section_header";
 import TaskModal from "./_components/TaskModal";
 import TaskForm from "./_components/TaskForm";
 import TaskDetailModal from "./_components/TaskDetailModal";
+
+interface TagItem {
+  id: string;
+  name: string;
+}
 
 interface Task {
   id: string;
@@ -16,6 +21,7 @@ interface Task {
   project_id: string;
   project_name: string | null;
   status: string;
+  tags: TagItem[];
 }
 
 interface Project {
@@ -35,15 +41,17 @@ export default function TasksPage() {
   const [statusFilter, setStatusFilter] = useState("Todas");
   const [projectFilter, setProjectFilter] = useState("Todos");
   const [priorityFilter, setPriorityFilter] = useState("Todas");
+  const [availableTags, setAvailableTags] = useState<TagItem[]>([]);
+  const [selectedTagId, setSelectedTagId] = useState<string | null>(null);
 
-  const statusOptions = ["Todas", "Pendientes", "En Progreso", "Completadas"];
+  const statusOptions = ["Todas", "Pendientes", "En Progreso", "Completadas", "Bloqueadas"];
   const priorityOptions = ["Todas", "Baja", "Media", "Alta", "Urgente"];
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const [tasksRes, projectsRes] = await Promise.all([
-        fetch("/api/tasks"),
+        fetch(selectedTagId ? `/api/tasks?tag_id=${selectedTagId}` : "/api/tasks"),
         fetch("/api/projects?state=active")
       ]);
 
@@ -56,16 +64,33 @@ export default function TasksPage() {
         const projectsData = await projectsRes.json();
         setProjects(projectsData.map((p: any) => ({ id: p.id, name: p.name })));
       }
-
     } catch (error) {
       console.error("Error fetching data:", error);
+
     } finally {
       setLoading(false);
+    }
+  }, [selectedTagId]);
+
+  const fetchTags = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+      const res = await fetch("/api/tasks/tags", {
+        headers: { "Authorization": `Bearer ${token}` },
+      });
+      if (res.ok) setAvailableTags(await res.json());
+    } catch (error) {
+      console.error("Error fetching tags:", error);
     }
   };
 
   useEffect(() => {
     fetchData();
+  }, [fetchData]);
+
+  useEffect(() => {
+    fetchTags();
   }, []);
 
   const handleSuccess = (isEdit: boolean) => {
@@ -77,6 +102,7 @@ export default function TasksPage() {
     });
     setTimeout(() => setToast(null), 3000);
     fetchData();
+    fetchTags();
   };
 
   const handleError = (msg: string) => {
@@ -98,7 +124,7 @@ export default function TasksPage() {
   const handleStatusCycle = async (task: Task, e: React.MouseEvent) => {
     e.stopPropagation();
 
-    const statusOrder = ["Pendiente", "En Progreso", "Completada"];
+    const statusOrder = ["Pendiente", "En Progreso", "Completada", "Bloqueada"];
     const currentIndex = statusOrder.indexOf(task.status);
     const nextStatus = statusOrder[(currentIndex + 1) % statusOrder.length];
 
@@ -112,7 +138,6 @@ export default function TasksPage() {
         },
         body: JSON.stringify({ status: nextStatus })
       });
-
     } catch (error) {
       console.error("Error updating status:", error);
       fetchData();
@@ -135,7 +160,6 @@ export default function TasksPage() {
       setTimeout(() => setToast(null), 3000);
       setSelectedTask(null);
       fetchData();
-
     } catch (error: any) {
       handleError(error.message || "Error al eliminar la tarea");
     }
@@ -152,10 +176,10 @@ export default function TasksPage() {
     let matchStatus = true;
     if (statusFilter === "Pendientes") matchStatus = task.status === "Pendiente";
     else if (statusFilter === "En Progreso") matchStatus = task.status === "En Progreso";
+    else if (statusFilter === "Bloqueadas") matchStatus = task.status === "Bloqueada";
     else if (statusFilter === "Completadas") matchStatus = task.status === "Completada";
 
     const matchProject = projectFilter === "Todos" || task.project_id === projectFilter;
-
     const matchPriority = priorityFilter === "Todas" || task.priority === priorityFilter;
 
     return matchStatus && matchProject && matchPriority;
@@ -174,9 +198,7 @@ export default function TasksPage() {
         </button>
       </SectionHeader>
 
-      {/* Panel de Filtros Avanzados */}
       <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4 mb-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4 shadow-sm">
-        {/* Filtro por Estado */}
         <div className="flex flex-wrap gap-1.5">
           {statusOptions.map((f) => (
             <button
@@ -224,6 +246,34 @@ export default function TasksPage() {
           </select>
         </div>
       </div>
+
+      {/* Tag filters */}
+      {availableTags.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-5 items-center">
+          <Tag className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+          <button
+            onClick={() => setSelectedTagId(null)}
+            className={`px-3 py-1 rounded-full text-xs transition-colors border ${selectedTagId === null
+              ? "bg-violet-100 text-violet-700 font-semibold border-transparent"
+              : "bg-white text-gray-400 border-gray-200 hover:text-violet-600"
+              }`}
+          >
+            Todas las etiquetas
+          </button>
+          {availableTags.map(tag => (
+            <button
+              key={tag.id}
+              onClick={() => setSelectedTagId(selectedTagId === tag.id ? null : tag.id)}
+              className={`px-3 py-1 rounded-full text-xs transition-colors border ${selectedTagId === tag.id
+                ? "bg-violet-100 text-violet-700 font-semibold border-violet-200"
+                : "bg-white text-gray-400 border-gray-200 hover:text-violet-600 hover:border-violet-200"
+                }`}
+            >
+              {tag.name}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Contenido */}
       {loading ? (
@@ -273,6 +323,8 @@ export default function TasksPage() {
                     <CheckCircle className="text-green-500" size={24} />
                   ) : task.status === "En Progreso" ? (
                     <Clock className="text-yellow-500" size={24} />
+                  ) : task.status === "Bloqueada" ? (
+                    <AlertOctagon className="text-orange-400" size={24} />
                   ) : (
                     <Circle className="text-gray-300" size={24} />
                   )}
@@ -293,6 +345,14 @@ export default function TasksPage() {
                         {task.priority}
                       </span>
                     </div>
+                    {task.tags?.map(tag => (
+                      <span
+                        key={tag.id}
+                        className="px-2 py-0.5 rounded-full text-xs font-medium bg-violet-50 text-violet-600 border border-violet-100"
+                      >
+                        {tag.name}
+                      </span>
+                    ))}
                   </div>
                 </div>
               </div>
