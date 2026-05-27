@@ -28,6 +28,35 @@ export async function GET(
   }
 }
 
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const token = req.cookies.get("token")?.value;
+    const { searchParams } = new URL(req.url);
+    const action = searchParams.get("action") ?? "cancel";
+
+    const response = await fetch(`${process.env.API_URL}/clients/${id}?action=${action}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: token ? `Bearer ${token}` : ""
+      },
+    });
+
+    const data = await parseBody(response);
+    if (!response.ok)
+      return NextResponse.json({ error: extractErrorMsg(data, "Error al eliminar el cliente") }, { status: response.status });
+
+    return NextResponse.json(data);
+
+  } catch (err) {
+    console.error("DELETE /api/clients/[id] error:", err);
+    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
+  }
+}
+
 export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
