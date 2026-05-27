@@ -24,12 +24,7 @@ export default function ClientDetailPage() {
 
   const fetchClient = useCallback(async () => {
     try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(`/api/clients/${params.id}`, {
-        headers: {
-          "Authorization": `Bearer ${token}`,
-        },
-      });
+      const res = await fetch(`/api/clients/${params.id}`);
 
       if (res.status === 401) {
         router.push("/login");

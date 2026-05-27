@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Clock, Check, Circle, CheckCircle2, CircleDot, Calendar, User, LayoutList, FolderOpen } from "lucide-react";
+import { Clock, Check, Circle, CheckCircle, Calendar, LayoutList, FolderOpen, SlidersHorizontal } from "lucide-react";
 import SectionHeader from "./../_components/section_header"
 import TaskModal from "./_components/TaskModal";
 import TaskForm from "./_components/TaskForm";
@@ -18,54 +18,81 @@ interface Task {
   status: string;
 }
 
+interface Project {
+  id: string;
+  name: string;
+}
+
 export default function TasksPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState("Todas");
 
-  const filters = ["Todas", "Pendientes", "En Progreso", "Completadas"];
+  const [statusFilter, setStatusFilter] = useState("Todas");
+  const [projectFilter, setProjectFilter] = useState("Todos");
+  const [priorityFilter, setPriorityFilter] = useState("Todas");
 
-  const fetchTasks = async () => {
+  const statusOptions = ["Todas", "Pendientes", "En Progreso", "Completadas"];
+  const priorityOptions = ["Todas", "Baja", "Media", "Alta", "Urgente"];
+
+  const fetchData = async () => {
+    setLoading(true);
     try {
-      const token = localStorage.getItem("token");
-      if (!token) return;
+      const [tasksRes, projectsRes] = await Promise.all([
+        fetch("/api/tasks"),
+        fetch("/api/projects?state=active")
+      ]);
 
-      const res = await fetch("/api/tasks", {
-        headers: {
-          "Authorization": `Bearer ${token}`
-        }
-      });
+      if (tasksRes.ok) {
+        const tasksData = await tasksRes.json();
+        setTasks(tasksData);
+      }
 
-      const data = await res.json();
-      if (res.ok) {
-        setTasks(data);
+      if (projectsRes.ok) {
+        const projectsData = await projectsRes.json();
+        setProjects(projectsData.map((p: any) => ({ id: p.id, name: p.name })));
       }
 
     } catch (error) {
-      console.error("Error fetching tasks:", error);
-
+      console.error("Error fetching data:", error);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchTasks();
+    fetchData();
   }, []);
 
-  const handleSuccess = () => {
+  const handleSuccess = (isEdit: boolean) => {
     setIsModalOpen(false);
-    setToast({ message: "Tarea creada exitosamente", type: "success" });
+    setTaskToEdit(null);
+    setToast({
+      message: isEdit ? "Tarea actualizada exitosamente" : "Tarea creada exitosamente",
+      type: "success"
+    });
     setTimeout(() => setToast(null), 3000);
-    fetchTasks();
+    fetchData();
   };
 
   const handleError = (msg: string) => {
     setToast({ message: msg, type: "error" });
     setTimeout(() => setToast(null), 3000);
+  };
+
+  const handleEditTask = (task: Task) => {
+    setSelectedTask(null);
+    setTaskToEdit(task);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setTaskToEdit(null);
   };
 
   const handleStatusCycle = async (task: Task, e: React.MouseEvent) => {
@@ -78,31 +105,25 @@ export default function TasksPage() {
     setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: nextStatus } : t));
 
     try {
-      const token = localStorage.getItem("token");
-      await fetch(`/api/tasks/${task.id}`, {
+      await fetch(`/api/tasks/${task.id}/status`, {
         method: "PATCH",
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({ status: nextStatus })
       });
 
     } catch (error) {
       console.error("Error updating status:", error);
-
-      fetchTasks();
+      fetchData();
       handleError("Error al actualizar el estado");
     }
   };
 
   const handleDeleteTask = async (taskId: string) => {
     try {
-      const token = localStorage.getItem("token");
-
       const res = await fetch(`/api/tasks/${taskId}`, {
-        method: "DELETE",
-        headers: { "Authorization": `Bearer ${token}` }
+        method: "DELETE"
       });
 
       if (!res.ok) {
@@ -113,7 +134,7 @@ export default function TasksPage() {
       setToast({ message: "Tarea eliminada exitosamente", type: "success" });
       setTimeout(() => setToast(null), 3000);
       setSelectedTask(null);
-      fetchTasks();
+      fetchData();
 
     } catch (error: any) {
       handleError(error.message || "Error al eliminar la tarea");
@@ -128,17 +149,22 @@ export default function TasksPage() {
   };
 
   const filteredTasks = tasks.filter(task => {
-    if (filter === "Todas") return true;
-    if (filter === "Pendientes") return task.status === "Pendiente";
-    if (filter === "En Progreso") return task.status === "En Progreso";
-    if (filter === "Completadas") return task.status === "Completada";
-    return true;
+    let matchStatus = true;
+    if (statusFilter === "Pendientes") matchStatus = task.status === "Pendiente";
+    else if (statusFilter === "En Progreso") matchStatus = task.status === "En Progreso";
+    else if (statusFilter === "Completadas") matchStatus = task.status === "Completada";
+
+    const matchProject = projectFilter === "Todos" || task.project_id === projectFilter;
+
+    const matchPriority = priorityFilter === "Todas" || task.priority === priorityFilter;
+
+    return matchStatus && matchProject && matchPriority;
   });
 
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <SectionHeader title="Tareas" subtitle="Organiza y prioriza tu trabajo" icon={<Check className="w-8 h-8 text-indigo-600"/>}>
+      <SectionHeader title="Tareas" subtitle="Organiza y prioriza tu trabajo" icon={<Check className="w-8 h-8 text-indigo-600" />}>
         <button
           onClick={() => setIsModalOpen(true)}
           className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-purple-500 text-white text-sm font-semibold hover:opacity-90 transition-opacity shadow"
@@ -148,26 +174,61 @@ export default function TasksPage() {
         </button>
       </SectionHeader>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-2 mb-6">
-        {filters.map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`px-4 py-1.5 rounded-full text-sm transition-colors border ${filter === f
-              ? "bg-violet-100 text-violet-700 font-semibold border-transparent shadow-sm"
-              : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50 hover:text-violet-600 shadow-sm"
-              }`}
+      {/* Panel de Filtros Avanzados */}
+      <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4 mb-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4 shadow-sm">
+        {/* Filtro por Estado */}
+        <div className="flex flex-wrap gap-1.5">
+          {statusOptions.map((f) => (
+            <button
+              key={f}
+              onClick={() => setStatusFilter(f)}
+              className={`px-4 py-1.5 rounded-xl text-sm transition-all ${statusFilter === f
+                ? "bg-white text-violet-700 font-semibold shadow border border-violet-100"
+                : "text-gray-500 hover:bg-white hover:text-gray-800"
+                }`}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+
+        {/* Filtros por Proyecto y Prioridad */}
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-3">
+          <div className="flex items-center gap-2 text-gray-400 text-xs font-medium uppercase tracking-wider mr-1">
+            <SlidersHorizontal size={14} />
+            <span>Filtros:</span>
+          </div>
+
+          {/* Selector de Proyectos */}
+          <select
+            value={projectFilter}
+            onChange={(e) => setProjectFilter(e.target.value)}
+            className="px-3 py-1.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-violet-400 cursor-pointer min-w-[140px]"
           >
-            {f}
-          </button>
-        ))}
+            <option value="Todos">Todos los Proyectos</option>
+            {projects.map(p => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+
+          {/* Selector de Prioridades */}
+          <select
+            value={priorityFilter}
+            onChange={(e) => setPriorityFilter(e.target.value)}
+            className="px-3 py-1.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-violet-400 cursor-pointer min-w-[140px]"
+          >
+            <option value="Todas">Todas las Prioridades</option>
+            {priorityOptions.filter(o => o !== "Todas").map(o => (
+              <option key={o} value={o}>{o}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Contenido */}
       {loading ? (
         <div className="flex-1 flex items-center justify-center">
-          <p className="text-sm text-gray-400">Cargando tareas...</p>
+          <p className="text-sm text-gray-400 animate-pulse">Cargando tus tareas...</p>
         </div>
       ) : filteredTasks.length === 0 ? (
         <div className="flex-1 flex items-center justify-center mt-6">
@@ -188,8 +249,9 @@ export default function TasksPage() {
               </button>
             </div>
           ) : (
-            <div className="text-center text-gray-400">
-              <p>No hay tareas que coincidan con "{filter}"</p>
+            <div className="text-center bg-gray-50 border border-gray-100 rounded-2xl p-8 text-gray-400 max-w-sm mx-auto">
+              <p className="font-medium text-gray-600 mb-1">Sin resultados</p>
+              <p className="text-xs">No hay tareas que coincidan con los criterios seleccionados.</p>
             </div>
           )}
         </div>
@@ -208,9 +270,9 @@ export default function TasksPage() {
                   title="Cambiar estado"
                 >
                   {task.status === "Completada" ? (
-                    <CheckCircle2 className="text-green-500" size={24} />
+                    <CheckCircle className="text-green-500" size={24} />
                   ) : task.status === "En Progreso" ? (
-                    <CircleDot className="text-yellow-500" size={24} />
+                    <Clock className="text-yellow-500" size={24} />
                   ) : (
                     <Circle className="text-gray-300" size={24} />
                   )}
@@ -248,8 +310,14 @@ export default function TasksPage() {
       )}
 
       {/* Modals */}
-      <TaskModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
-        <TaskForm onSuccess={handleSuccess} onError={handleError} onClose={() => setIsModalOpen(false)} />
+      <TaskModal isOpen={isModalOpen} onClose={handleCloseModal}>
+        <TaskForm
+          key={taskToEdit ? taskToEdit.id : "new-task"}
+          taskToEdit={taskToEdit}
+          onSuccess={handleSuccess}
+          onError={handleError}
+          onClose={handleCloseModal}
+        />
       </TaskModal>
 
       {selectedTask && (
@@ -257,6 +325,7 @@ export default function TasksPage() {
           task={selectedTask}
           onClose={() => setSelectedTask(null)}
           onDelete={handleDeleteTask}
+          onEdit={handleEditTask}
         />
       )}
 

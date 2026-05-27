@@ -28,13 +28,7 @@ export default function ClientsPage() {
 
   const fetchClients = async () => {
     try {
-      const token = localStorage.getItem("token");
-
-      const res = await fetch("/api/clients", {
-        headers: {
-          "Authorization": `Bearer ${token}`,
-        },
-      });
+      const res = await fetch("/api/clients");
 
       if (res.status === 401) {
         router.push("/login");

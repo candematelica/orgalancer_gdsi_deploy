@@ -8,9 +8,11 @@ export default function LoginForm({
   error,
   loading,
   show_password,
+  remember_me,
   handle_change,
   handle_submit,
   toggle_password_visibility,
+  toggle_remember_me,
 }: Props) {
   return (
     <>
@@ -97,8 +99,17 @@ export default function LoginForm({
           </div>
         </div>
 
-        {/* Olvidaste tu contraseña */}
-        <div className="flex justify-end">
+        <div className="flex items-center justify-between">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={remember_me}
+              onChange={toggle_remember_me}
+              className="w-4 h-4 text-violet-600 border-gray-300 rounded focus:ring-violet-500 focus:ring-2"
+            />
+            <span className="text-sm text-gray-600">Recordarme</span>
+          </label>
+
           <Link href="#" className="text-sm text-violet-600 hover:text-violet-700 font-medium hover:underline transition-colors">
             ¿Olvidaste tu contraseña?
           </Link>

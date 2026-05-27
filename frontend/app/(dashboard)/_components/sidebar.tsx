@@ -20,9 +20,19 @@ export default function Sidebar() {
     return () => window.removeEventListener("notifications_updated", read);
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem("user");
-    router.push("/login");
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", {
+        method: "POST"
+      });
+
+      localStorage.removeItem("user");
+      router.push("/login");
+      router.refresh();
+
+    } catch (error) {
+      console.error("Error al cerrar sesión", error);
+    }
   };
 
   return (
