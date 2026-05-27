@@ -79,8 +79,6 @@ useEffect(() => {
     setSaving(true);
     setError(null);
     try {
-      const token = localStorage.getItem("token");
-      console.log("TOKEN:", token);
       const res = await fetch(`/api/time-entries`, {
         method: "POST",
         headers: {
