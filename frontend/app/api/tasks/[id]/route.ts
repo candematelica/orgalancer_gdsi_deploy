@@ -7,12 +7,12 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
-    const token = req.headers.get("Authorization");
+    const token = req.cookies.get("token")?.value;
     const body = await req.json();
 
     const response = await fetch(`${process.env.API_URL}/tasks/${id}/status`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json", "Authorization": token || "" },
+      headers: { "Content-Type": "application/json", Authorization: token ? `Bearer ${token}` : "" },
       body: JSON.stringify(body),
     });
 
@@ -34,7 +34,7 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    const token = req.headers.get("Authorization");
+    const token = req.cookies.get("token")?.value;
 
     const response = await fetch(`${process.env.API_URL}/tasks/${id}`, {
       method: "DELETE",
@@ -65,10 +65,7 @@ export async function PUT(
 
     const response = await fetch(`${process.env.API_URL}/tasks/${id}`, {
       method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": token || ""
-      },
+      headers: { "Content-Type": "application/json", Authorization: token ? `Bearer ${token}` : "" },
       body: JSON.stringify(body),
     });
 
