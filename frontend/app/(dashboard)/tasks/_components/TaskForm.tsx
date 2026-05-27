@@ -75,11 +75,7 @@ export default function TaskForm({ taskToEdit, onSuccess, onError, onClose }: Ta
 
     const fetchTags = async () => {
       try {
-        const token = localStorage.getItem("token");
-        if (!token) return;
-        const res = await fetch("/api/tasks/tags", {
-          headers: { "Authorization": `Bearer ${token}` },
-        });
+        const res = await fetch("/api/tasks/tags");
         if (res.ok) setAvailableTags(await res.json());
       } catch (error) {
         console.error("Error fetching tags:", error);

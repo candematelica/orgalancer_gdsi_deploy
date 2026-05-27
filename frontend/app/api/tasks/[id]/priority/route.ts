@@ -7,7 +7,7 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
-    const token = req.headers.get("Authorization");
+    const token = req.cookies.get("token")?.value
     const body = await req.json();
 
     const response = await fetch(`${process.env.API_URL}/tasks/${id}/priority`, {
