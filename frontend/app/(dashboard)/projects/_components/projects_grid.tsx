@@ -13,6 +13,7 @@ interface ProjectsGridProps {
   onNewProject?: () => void;
   onEdit: (project: EnrichedProject) => void;
   onStateChange: () => void;
+  onStartTimer?: (project: EnrichedProject) => void;
 }
 
 function SkeletonCard() {
@@ -44,6 +45,7 @@ export default function ProjectsGrid({
   currency,
   onNewProject,
   onEdit,
+  onStartTimer,
   onStateChange,
 }: ProjectsGridProps) {
   if (loading) {
@@ -81,6 +83,7 @@ export default function ProjectsGrid({
             currency={currency}
             onEdit={onEdit}
             onStateChange={onStateChange}
+            onStartTimer={onStartTimer}
           />
         ))}
       </div>
@@ -96,6 +99,7 @@ export default function ProjectsGrid({
           currency={currency}
           onEdit={onEdit}
           onStateChange={onStateChange}
+          onStartTimer={onStartTimer}
         />
       ))}
     </div>

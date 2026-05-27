@@ -6,6 +6,7 @@ import SectionHeader from "./../_components/section_header";
 import TaskModal from "./_components/TaskModal";
 import TaskForm from "./_components/TaskForm";
 import TaskDetailModal from "./_components/TaskDetailModal";
+import { useTimerContext } from "../_lib/TimerContext";
 
 interface TagItem {
   id: string;
@@ -46,6 +47,8 @@ export default function TasksPage() {
 
   const statusOptions = ["Todas", "Pendientes", "En Progreso", "Completadas", "Bloqueadas"];
   const priorityOptions = ["Todas", "Baja", "Media", "Alta", "Urgente"];
+
+  const { setTask: setTimerTask, setIsOpen: setTimerOpen } = useTimerContext();
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -357,7 +360,22 @@ export default function TasksPage() {
                 </div>
               </div>
 
-              <div className="flex items-center ml-10 sm:ml-0">
+              <div className="flex items-center gap-2 ml-10 sm:ml-0">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setTimerTask({
+                      id: task.id,
+                      title: task.title,
+                      project_id: task.project_id,
+                    });
+                    setTimerOpen(true);
+                  }}
+                  className="p-2 rounded-lg hover:bg-purple-100 text-purple-500 hover:text-purple-600 transition-colors opacity-0 group-hover:opacity-100"
+                  title="Registrar tiempo"
+                >
+                  <Clock className="w-5 h-5" />
+                </button>
                 <div className="w-8 flex justify-end opacity-0 group-hover:opacity-100 transition-opacity text-gray-400">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M5 12h14M12 5l7 7-7 7" />

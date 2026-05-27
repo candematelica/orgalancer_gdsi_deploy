@@ -12,6 +12,7 @@ interface ProjectListRowProps {
   currency?: string;
   onEdit?: (project: EnrichedProject) => void;
   onStateChange?: () => void;
+  onStartTimer?: (project: EnrichedProject) => void;
 }
 
 function formatCurrency(value: number, currency = "€") {
@@ -24,6 +25,7 @@ export default function ProjectListRow({
   currency = "€",
   onEdit,
   onStateChange,
+  onStartTimer,
 }: ProjectListRowProps) {
   const [currentState, setCurrentState] = useState(project.state);
   const [currentTasks, setCurrentTasks] = useState({

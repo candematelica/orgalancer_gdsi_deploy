@@ -1,4 +1,4 @@
-import { User, Calendar, Pencil } from "lucide-react";
+import { User, Calendar, Pencil, Clock } from "lucide-react";
 import Link from "next/link";
 import { EnrichedProject } from "../_hooks/use_projects";
 import ProgressBar from "./progress_bar";
@@ -12,10 +12,20 @@ interface ProjectCardProps {
   currency?: string;
   onEdit: (project: EnrichedProject) => void;
   onStateChange?: () => void;
+  onStartTimer?: (project: EnrichedProject) => void;
 }
 
 function formatCurrency(value: number, currency = "€") {
   return `${currency}${value.toLocaleString("es-ES")}`;
+}
+
+function formatDate(dateStr: string): string {
+  try {
+    const [year, month, day] = dateStr.split("-");
+    return `${day}/${month}/${year}`;
+  } catch {
+    return dateStr;
+  }
 }
 
 export default function ProjectCard({
@@ -23,6 +33,7 @@ export default function ProjectCard({
   currency = "€",
   onEdit,
   onStateChange,
+  onStartTimer,
 }: ProjectCardProps) {
   const [currentState, setCurrentState] = useState(project.state);
   const [currentTasks, setCurrentTasks] = useState({
@@ -48,7 +59,6 @@ export default function ProjectCard({
       });
 
       if (res.ok) {
-        // If completing, all tasks are now done
         if (newState === "completed") {
           setCurrentTasks((prev) => ({ ...prev, completed: prev.total }));
         }
@@ -88,8 +98,9 @@ export default function ProjectCard({
       />
 
       <div
-        className={`bg-white rounded-2xl border shadow-sm hover:shadow-md transition-shadow duration-200 flex flex-col overflow-hidden ${isReadOnly ? "border-gray-100 opacity-90" : "border-gray-100"
-          }`}
+        className={`bg-white rounded-2xl border shadow-sm hover:shadow-md transition-shadow duration-200 flex flex-col overflow-hidden ${
+          isReadOnly ? "border-gray-100 opacity-90" : "border-gray-100"
+        }`}
       >
         {/* Read-only banner */}
         {isReadOnly && (
@@ -117,14 +128,24 @@ export default function ProjectCard({
               </span>
             </div>
             <div className="flex items-center gap-2">
-              {!isReadOnly && (
-                <button
-                  onClick={() => onEdit(project)}
-                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs text-gray-500 hover:bg-gray-100 transition-colors"
-                >
-                  <Pencil className="w-3 h-3" />
-                  Editar
-                </button>
+              {currentState === "active" && (
+                <>
+                  <button
+                    onClick={() => onStartTimer?.(project)}
+                    className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs text-blue-500 hover:bg-blue-50 transition-colors"
+                    title="Registrar tiempo"
+                  >
+                    <Clock className="w-3 h-3" />
+                    Tiempo
+                  </button>
+                  <button
+                    onClick={() => onEdit(project)}
+                    className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs text-gray-500 hover:bg-gray-100 transition-colors"
+                  >
+                    <Pencil className="w-3 h-3" />
+                    Editar
+                  </button>
+                </>
               )}
               <StatusBadge status={currentState} />
             </div>
@@ -166,11 +187,7 @@ export default function ProjectCard({
           )}
 
           <ProgressBar
-            percentage={
-              currentState === "completed"
-                ? 100
-                : project._computed_progress
-            }
+            percentage={currentState === "completed" ? 100 : project._computed_progress}
             alert={isReadOnly ? null : project._computed_alert}
             className="mb-2"
           />
@@ -241,13 +258,4 @@ export default function ProjectCard({
       </div>
     </>
   );
-}
-
-function formatDate(dateStr: string): string {
-  try {
-    const [year, month, day] = dateStr.split("-");
-    return `${day}/${month}/${year}`;
-  } catch {
-    return dateStr;
-  }
 }

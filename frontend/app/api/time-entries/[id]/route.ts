@@ -1,0 +1,51 @@
+import { NextRequest, NextResponse } from "next/server";
+import { parseBody, extractErrorMsg } from "../../utils";
+
+
+export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    const token = req.cookies.get("token")?.value;
+    const body = await req.json();
+
+    const response = await fetch(`${process.env.API_URL}/time-entries/${params.id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: token ? `Bearer ${token}` : "",
+      },
+      body: JSON.stringify(body),
+    });
+
+    const data = await parseBody(response);
+    if (!response.ok)
+      return NextResponse.json({ error: extractErrorMsg(data, "Error al actualizar") }, { status: response.status });
+
+    return NextResponse.json(data);
+  } catch (err) {
+    console.error("PUT /api/time-entries error:", err);
+    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    const token = req.cookies.get("token")?.value;
+
+    const response = await fetch(`${process.env.API_URL}/time-entries/${params.id}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: token ? `Bearer ${token}` : "",
+      },
+    });
+
+    if (!response.ok) {
+      const data = await parseBody(response);
+      return NextResponse.json({ error: extractErrorMsg(data, "Error al eliminar") }, { status: response.status });
+    }
+
+    return new NextResponse(null, { status: 204 });
+  } catch (err) {
+    console.error("DELETE /api/time-entries error:", err);
+    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
+  }
+}
