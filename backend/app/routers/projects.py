@@ -14,6 +14,7 @@ from app.schemas.project import (
     ProjectUpdate,
 )
 from app.routers.auth import get_current_user
+from app.services.profit_calculator import ProfitCalculator
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -190,6 +191,18 @@ def update_project_by_id(
         .first()
     )
     return _to_response(full_project)
+
+# --- PROFITABILITY ---
+@router.get("/{project_id}/profitability")
+def project_profitability(
+    project_id: str,    
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    try:
+        return ProfitCalculator.get_project_profitability(db, project_id, current_user.id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
 
 def _progress(total: int, completed: int) -> int:
     return round((completed / total) * 100) if total > 0 else 0
