@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { X } from "lucide-react";
-import { type Transaction } from "./transaction_list";
-import { useReceipts }      from "./../../_receipts/_hooks/use_receipts";
-import { type Receipt }     from "./../../_receipts/types";
+import { type Transaction } from "./income_list";
+import { useReceipts }      from "../../_receipts/_hooks/use_receipts";
+import { type Receipt }     from "../../_receipts/types";
 
 interface SelectOption { id: string; name: string; }
 interface ProjectOption { id: string; name: string; client_id: string | null; }
@@ -158,7 +158,7 @@ export default function RegisterIncomeModal({ open, onClose, onSave, currency, i
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Tipo de pago */}
+          {/* Payment Method */}
           <div className="flex gap-2">
             {(["monetario", "canje"] as const).map((type) => (
               <button

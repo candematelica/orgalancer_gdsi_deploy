@@ -30,8 +30,8 @@ export const NAV_ITEMS = [
     icon: <SquareCheck size={18} />,
   },
   {
-    label: "Ingresos",
-    href: "/revenue",
+    label: "Movimientos",
+    href: "/transactions",
     icon: (
       <svg width="18" height="18" fill="none" viewBox="0 0 24 24">
         <rect x="2" y="6" width="20" height="13" rx="2" stroke="currentColor" strokeWidth="1.5" />
