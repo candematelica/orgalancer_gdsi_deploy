@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, X, Briefcase } from 'lucide-react';
+import { Plus, X, Briefcase, Sparkles } from 'lucide-react';
 
 import { EnrichedProject, useProjects } from "./_hooks/use_projects";
 import { useCreateProjectForm } from "./_hooks/create_new_project";
@@ -12,6 +12,7 @@ import StatsHeader from "./_components/stats_header";
 import ProjectFilters from "./_components/project_filters";
 import ProjectsGrid from "./_components/projects_grid";
 import EditProjectPanel from "./_components/edit_project_panel";
+import BudgetModal from "./_components/budget_modal";
 
 export default function ProjectsPage() {
   const router = useRouter();
@@ -19,6 +20,7 @@ export default function ProjectsPage() {
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [editingProject, setEditingProject] = useState<EnrichedProject | null>(null);
+  const [budgetModalOpen, setBudgetModalOpen] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -79,7 +81,8 @@ export default function ProjectsPage() {
   }
 
   return (
-    <> 
+    <>
+      <BudgetModal open={budgetModalOpen} onClose={() => setBudgetModalOpen(false)} />
       <EditProjectPanel
         project={editingProject}
         onClose={() => setEditingProject(null)}
@@ -87,6 +90,13 @@ export default function ProjectsPage() {
       />
       { /* header */ }
       <SectionHeader title="Proyectos" subtitle="Gestioná todos tus proyectos freelance" icon={<Briefcase className="w-8 h-8 text-indigo-600"/>}>
+        <button
+          onClick={() => setBudgetModalOpen(true)}
+          className="flex items-center space-x-2 px-5 py-3 border border-indigo-200 text-indigo-600 bg-indigo-50 rounded-xl hover:bg-indigo-100 transition-all font-medium text-sm"
+        >
+          <Sparkles className="w-4 h-4" />
+          <span>Generar presupuesto</span>
+        </button>
         <button
           onClick={() => setShowForm((prev) => !prev)}
           className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:shadow-lg hover:scale-[1.02] transition-all font-medium shadow-sm"
