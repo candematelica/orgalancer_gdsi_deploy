@@ -69,6 +69,28 @@ def update_category(
     return cat
 
 
+@router.delete("/categories/{category_id}", status_code=204)
+def delete_category(
+    category_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    cat = db.query(ExpenseCategory).filter(
+        ExpenseCategory.id == category_id,
+        ExpenseCategory.user_id == current_user.id,
+    ).first()
+    if not cat:
+        raise HTTPException(status_code=404, detail="Categoría no encontrada")
+
+    db.query(Expense).filter(
+        Expense.category_id == category_id,
+        Expense.user_id == current_user.id,
+    ).update({"category_id": None})
+
+    db.delete(cat)
+    db.commit()
+    
+
 @router.post("", response_model=ExpenseResponse, status_code=201)
 def create_expense(
     data: ExpenseCreate,
@@ -139,8 +161,6 @@ def update_expense(
     if not expense:
         raise HTTPException(status_code=404, detail="Gasto no encontrado")
 
-    if data.category_id:
-        _validate_category(data.category_id, current_user.id, db)
     if data.project_id:
         _validate_project(data.project_id, current_user.id, db)
 
@@ -173,7 +193,10 @@ def _validate_project(project_id: str, user_id: str, db: Session) -> Project:
 
 
 def _enrich(expense: Expense, db: Session) -> ExpenseResponse:
-    cat = db.query(ExpenseCategory).filter(ExpenseCategory.id == expense.category_id).first()
+    cat = None
+    if expense.category_id:
+        cat = db.query(ExpenseCategory).filter(ExpenseCategory.id == expense.category_id).first()
+    
     project_name = None
     if expense.project_id:
         p = db.query(Project).filter(Project.id == expense.project_id).first()
