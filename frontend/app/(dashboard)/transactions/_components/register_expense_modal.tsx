@@ -144,10 +144,11 @@ export default function RegisterExpenseModal({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!form.category_id)              { setError("Seleccioná una categoría."); return; }
     if (!form.amount || parseFloat(form.amount) <= 0) { setError("Ingresá un monto válido."); return; }
     setSubmitting(true);
     const ok = await onSave({
-      category_id: form.category_id || null,
+      category_id: form.category_id,
       project_id:  form.project_id || null,
       amount:      parseFloat(form.amount),
       currency,
