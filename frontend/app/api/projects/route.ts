@@ -5,8 +5,10 @@ import { parseBody, extractErrorMsg } from "./../utils";
 export async function GET(req: NextRequest) {
   try {
     const state = new URL(req.url).searchParams.get("state");
-    const backendUrl = new URL(`${process.env.API_URL}/projects/`);
-    if (state) backendUrl.searchParams.set("state", state);
+const clientId = new URL(req.url).searchParams.get("client_id"); 
+const backendUrl = new URL(`${process.env.API_URL}/projects/`);
+if (state) backendUrl.searchParams.set("state", state);
+if (clientId) backendUrl.searchParams.set("client_id", clientId);
 
     const token = req.cookies.get("token")?.value
     const response = await fetch(backendUrl.toString(), {
