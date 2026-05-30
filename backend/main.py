@@ -7,6 +7,7 @@ from app.routers.tariff_suggestion import router as tariff_router
 from app.database import engine, Base
 import app.models
 import os
+from app.routers import budget  
 
 Base.metadata.create_all(bind=engine)
 
@@ -55,6 +56,7 @@ app.include_router(tariff_router)
 app.include_router(projects.router)
 app.include_router(tasks.router)
 app.include_router(revenue.router)
+app.include_router(budget.router)
 
 @app.get("/health")
 def health():
