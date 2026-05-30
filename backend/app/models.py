@@ -210,3 +210,33 @@ class Receipt(Base):
     project         = relationship("Project")
     client          = relationship("Client")
     revenue_entries = relationship("Revenue", back_populates="receipt")
+
+
+class ExpenseCategory(Base):
+    __tablename__ = "expense_categories"
+
+    id      = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    name    = Column(String(100), nullable=False)
+    color   = Column(String(7), nullable=True)
+
+    user     = relationship("User")
+    expenses = relationship("Expense", back_populates="category")
+
+
+class Expense(Base):
+    __tablename__ = "expenses"
+
+    id          = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id     = Column(String, ForeignKey("users.id"),             nullable=False, index=True)
+    category_id = Column(String, ForeignKey("expense_categories.id"), nullable=False, index=True)
+    project_id  = Column(String, ForeignKey("projects.id"),          nullable=True,  index=True)
+
+    amount      = Column(Numeric(10, 2), nullable=False)
+    currency    = Column(String,         nullable=False)
+    date        = Column(Date,           nullable=False)
+    description = Column(String,         nullable=True)
+
+    user     = relationship("User")
+    category = relationship("ExpenseCategory", back_populates="expenses")
+    project  = relationship("Project")
