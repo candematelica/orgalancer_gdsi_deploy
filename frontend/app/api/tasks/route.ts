@@ -3,9 +3,14 @@ import { parseBody, extractErrorMsg } from "../utils";
 
 export async function GET(req: NextRequest) {
   try {
-    const token = req.cookies.get("token")?.value
+    const token = req.cookies.get("token")?.value;
+    const { searchParams } = new URL(req.url);
+    const tagId = searchParams.get("tag_id");
+    const url = tagId
+      ? `${process.env.API_URL}/tasks/?tag_id=${tagId}`
+      : `${process.env.API_URL}/tasks/`;
 
-    const response = await fetch(`${process.env.API_URL}/tasks/`, {
+    const response = await fetch(url, {
       headers: {
         Authorization: token ? `Bearer ${token}` : ""
       },
