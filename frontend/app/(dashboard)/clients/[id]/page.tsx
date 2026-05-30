@@ -15,6 +15,18 @@ type Client = {
   extra_info: string;
 };
 
+type Receipt = {
+  id: string;
+  concept: string;
+  amount: number;
+  date_emitted: string;
+  status: string;
+  client_id: string | null;
+  project_name: string | null;
+};
+
+type ReminderStatus = "idle" | "loading" | "sent" | "error";
+
 export default function ClientDetailPage() {
   const router = useRouter();
   const params = useParams();
@@ -23,6 +35,11 @@ export default function ClientDetailPage() {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [deleteModal, setDeleteModal] = useState<"none" | "confirm" | "warning">("none");
   const [deleting, setDeleting] = useState(false);
+
+  const [pendingReceipts, setPendingReceipts] = useState<Receipt[]>([]);
+  const [selectedReceiptId, setSelectedReceiptId] = useState<string>("");
+  const [reminderStatus, setReminderStatus] = useState<ReminderStatus>("idle");
+  const [reminderError, setReminderError] = useState<string>("");
 
   const fetchClient = useCallback(async () => {
     try {
@@ -41,9 +58,50 @@ export default function ClientDetailPage() {
     }
   }, [params.id, router]);
 
+  const fetchPendingReceipts = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/receipts?client_id=${params.id}`);
+      if (res.ok) {
+        const data: Receipt[] = await res.json();
+        const pending = data.filter((r) => r.status === "pending");
+        setPendingReceipts(pending);
+        if (pending.length > 0) setSelectedReceiptId(pending[0].id);
+      }
+    } catch { }
+  }, [params.id]);
+
   useEffect(() => {
     fetchClient();
-  }, [fetchClient]);
+    fetchPendingReceipts();
+  }, [fetchClient, fetchPendingReceipts]);
+
+  const handleSendReminder = async () => {
+    if (!selectedReceiptId || reminderStatus === "loading") return;
+    setReminderStatus("loading");
+    setReminderError("");
+
+    try {
+      const res = await fetch("/api/reminders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client_id: params.id,
+          invoice_id: selectedReceiptId,
+        }),
+      });
+
+      if (res.ok) {
+        setReminderStatus("sent");
+      } else {
+        const data = await res.json();
+        setReminderError(data.error || "Error al enviar el recordatorio");
+        setReminderStatus("error");
+      }
+    } catch {
+      setReminderError("Error de conexión");
+      setReminderStatus("error");
+    }
+  };
 
   const handleDeleteClick = async () => {
     try {
@@ -194,6 +252,85 @@ export default function ClientDetailPage() {
           </div>
           <p className="text-3xl font-bold text-green-600">$0</p>
           <p className="text-xs text-gray-400 mt-1">Se calculará con los proyectos</p>
+        </div>
+
+        {/* Recordatorio de pago */}
+        <div className="col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center">
+              <svg width="20" height="20" fill="none" viewBox="0 0 24 24" className="text-amber-500">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M13.73 21a2 2 0 0 1-3.46 0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <h2 className="text-base font-semibold text-amber-600">Recordatorio de pago</h2>
+          </div>
+
+          {pendingReceipts.length === 0 ? (
+            <p className="text-sm text-gray-400">
+              No hay facturas pendientes para este cliente.
+            </p>
+          ) : (
+            <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4">
+              <div className="flex-1 w-full sm:w-auto">
+                <label
+                  htmlFor="receipt-select"
+                  className="block text-xs text-gray-500 mb-1.5 font-medium"
+                >
+                  Factura pendiente
+                </label>
+                <select
+                  id="receipt-select"
+                  value={selectedReceiptId}
+                  onChange={(e) => {
+                    setSelectedReceiptId(e.target.value);
+                    setReminderStatus("idle");
+                    setReminderError("");
+                  }}
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-violet-300 focus:border-violet-400 transition-all"
+                >
+                  {pendingReceipts.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      #{r.id.slice(0, 8).toUpperCase()} — {r.concept} — ${r.amount.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex flex-col items-start sm:items-end gap-1.5">
+                <button
+                  id="send-reminder-btn"
+                  onClick={handleSendReminder}
+                  disabled={reminderStatus === "loading" || reminderStatus === "sent"}
+                  className={`
+                    px-6 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 flex items-center gap-2 shadow-sm
+                    ${reminderStatus === "sent"
+                      ? "bg-green-100 text-green-700 border border-green-200 cursor-default"
+                      : reminderStatus === "loading"
+                        ? "bg-violet-100 text-violet-500 border border-violet-200 cursor-wait"
+                        : "bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 hover:shadow-md active:scale-[0.98]"
+                    }
+                    disabled:opacity-80
+                  `}
+                >
+                  {reminderStatus === "loading" && (
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                  )}
+                  {reminderStatus === "idle" && "Enviar recordatorio"}
+                  {reminderStatus === "loading" && "Enviando..."}
+                  {reminderStatus === "sent" && "✓ Recordatorio enviado"}
+                  {reminderStatus === "error" && "Reintentar envío"}
+                </button>
+
+                {reminderStatus === "error" && (
+                  <p className="text-xs text-red-500">{reminderError}</p>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Notas internas — ocupa todo el ancho si hay notas */}
