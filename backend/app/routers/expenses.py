@@ -47,6 +47,28 @@ def list_categories(
     )
 
 
+@router.patch("/categories/{category_id}", response_model=ExpenseCategoryResponse)
+def update_category(
+    category_id: str,
+    data: ExpenseCategoryUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    cat = db.query(ExpenseCategory).filter(
+        ExpenseCategory.id == category_id,
+        ExpenseCategory.user_id == current_user.id,
+    ).first()
+    if not cat:
+        raise HTTPException(status_code=404, detail="Categoría no encontrada")
+
+    for field, value in data.model_dump(exclude_unset=True).items():
+        setattr(cat, field, value)
+
+    db.commit()
+    db.refresh(cat)
+    return cat
+
+
 @router.post("", response_model=ExpenseResponse, status_code=201)
 def create_expense(
     data: ExpenseCreate,
@@ -99,6 +121,34 @@ def get_expense(
     ).first()
     if not expense:
         raise HTTPException(status_code=404, detail="Gasto no encontrado")
+    return _enrich(expense, db)
+
+
+
+@router.patch("/{expense_id}", response_model=ExpenseResponse)
+def update_expense(
+    expense_id: str,
+    data: ExpenseUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    expense = db.query(Expense).filter(
+        Expense.id == expense_id,
+        Expense.user_id == current_user.id,
+    ).first()
+    if not expense:
+        raise HTTPException(status_code=404, detail="Gasto no encontrado")
+
+    if data.category_id:
+        _validate_category(data.category_id, current_user.id, db)
+    if data.project_id:
+        _validate_project(data.project_id, current_user.id, db)
+
+    for field, value in data.model_dump(exclude_unset=True).items():
+        setattr(expense, field, value)
+
+    db.commit()
+    db.refresh(expense)
     return _enrich(expense, db)
 
 
