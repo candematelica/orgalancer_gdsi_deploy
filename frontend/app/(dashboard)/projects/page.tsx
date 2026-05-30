@@ -13,20 +13,23 @@ import ProjectFilters from "./_components/project_filters";
 import ProjectsGrid from "./_components/projects_grid";
 import EditProjectPanel from "./_components/edit_project_panel";
 import BudgetModal from "./_components/budget_modal";
+import { useTimerContext } from "../_lib/TimerContext";
 
 export default function ProjectsPage() {
   const router = useRouter();
+  const { setTask: setTimerProject, setIsOpen: setTimerOpen } = useTimerContext();
 
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [editingProject, setEditingProject] = useState<EnrichedProject | null>(null);
   const [budgetModalOpen, setBudgetModalOpen] = useState(false);
+  const [timeRefreshKey, setTimeRefreshKey] = useState(0);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
     const userRaw = localStorage.getItem("user");
+    console.log("USERRAW: ", userRaw)
 
-    if (!token || !userRaw) {
+    if (!userRaw) {
       router.push("/login");
       return;
     }
@@ -50,14 +53,14 @@ export default function ProjectsPage() {
 
   // form logic (post) ---
   const [showForm, setShowForm] = useState(false);
-  const { 
-    formData, 
-    setFormData, 
-    handleSubmit, 
-    error: formError, 
-    saved, 
-    loading: formLoading, 
-    clients 
+  const {
+    formData,
+    setFormData,
+    handleSubmit,
+    error: formError,
+    saved,
+    loading: formLoading,
+    clients
   } = useCreateProjectForm();
 
   async function onSubmit(e: React.FormEvent) {
@@ -88,8 +91,8 @@ export default function ProjectsPage() {
         onClose={() => setEditingProject(null)}
         onSaved={() => { actions.reload(); actions.reloadStats(); }}
       />
-      { /* header */ }
-      <SectionHeader title="Proyectos" subtitle="Gestioná todos tus proyectos freelance" icon={<Briefcase className="w-8 h-8 text-indigo-600"/>}>
+      { /* header */}
+      <SectionHeader title="Proyectos" subtitle="Gestioná todos tus proyectos freelance" icon={<Briefcase className="w-8 h-8 text-indigo-600" />}>
         <button
           onClick={() => setBudgetModalOpen(true)}
           className="flex items-center space-x-2 px-5 py-3 border border-indigo-200 text-indigo-600 bg-indigo-50 rounded-xl hover:bg-indigo-100 transition-all font-medium text-sm"
@@ -230,7 +233,15 @@ export default function ProjectsPage() {
         activeFilter={state.activeFilter}
         currency="€"
         onEdit={(project) => setEditingProject(project)}
-        onStateChange={() => { actions.reload(); actions.reloadStats(); }} 
+        onStateChange={() => { actions.reload(); actions.reloadStats(); }}
+        onStartTimer={(project) => {
+          setTimerProject({
+            id: project.id,
+            title: project.name,
+            project_id: project.id,
+          });
+          setTimerOpen(true);
+        }}
       />
     </>
   );

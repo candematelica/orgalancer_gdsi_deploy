@@ -4,8 +4,6 @@
 
 import { useEffect, useState } from "react";
 import { AlertCircle } from "lucide-react";
-import { getUser } from "../../../_hooks/get_user";
-import { API_BASE } from "../_lib/api";
 import AvatarUpload from "./avatar_upload";
 import ProfileForm, { type ProfileData } from "./profile_form";
 import SettingsShell from "./settings_layout";
@@ -33,9 +31,6 @@ export default function ProfileTab() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
     let cancelled = false;
 
     (async () => {
@@ -43,9 +38,7 @@ export default function ProfileTab() {
         setLoading(true);
         setError(null);
 
-        const res = await fetch("/api/settings", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await fetch("/api/settings");
 
         if (!res.ok) throw new Error();
         const data: ProfileData = await res.json();

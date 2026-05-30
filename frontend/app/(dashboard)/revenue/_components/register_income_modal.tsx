@@ -3,8 +3,11 @@
 import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { type Transaction } from "./transaction_list";
+import { useReceipts }      from "./../../_receipts/_hooks/use_receipts";
+import { type Receipt }     from "./../../_receipts/types";
 
 interface SelectOption { id: string; name: string; }
+interface ProjectOption { id: string; name: string; client_id: string | null; }
 
 interface Props {
   open: boolean;
@@ -18,6 +21,7 @@ interface Props {
 const EMPTY = {
   client_id: "",
   project_id: "",
+  receipt_id: "",
   amount: "",
   payment_type: "monetario" as "monetario" | "canje",
   payment_method: "Transferencia",
@@ -29,9 +33,7 @@ function useOptions(apiPath: string, enabled: boolean): SelectOption[] {
   const [options, setOptions] = useState<SelectOption[]>([]);
   useEffect(() => {
     if (!enabled) return;
-    const token = localStorage.getItem("token");
-    if (!token) return;
-    fetch(apiPath, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" })
+    fetch(apiPath, { cache: "no-store" })
       .then((r) => r.ok ? r.json() : [])
       .then((data: any[]) => setOptions(data.map((d) => ({ id: d.id, name: d.name }))))
       .catch(() => {});
@@ -44,19 +46,45 @@ export default function RegisterIncomeModal({ open, onClose, onSave, currency, i
   const [error, setError] = useState<string | null>(null);
 
   const clients  = useOptions("/api/clients",  open);
-  const projects = useOptions("/api/projects", open);
+  
+  const [allProjects, setAllProjects] = useState<ProjectOption[]>([]);
+  useEffect(() => {
+  if (!open) return;
+  fetch("/api/projects", { cache: "no-store" })
+    .then(r => r.ok ? r.json() : [])
+    .then((data: any[]) =>
+      setAllProjects(data.map(p => ({ id: p.id, name: p.name, client_id: p.client_id ?? null })))
+    )
+    .catch(() => {});
+  }, [open]);
 
-  // Pre-fill form when editing
+  const projects = form.client_id
+  ? allProjects.filter(p => p.client_id === form.client_id)
+  : allProjects;
+
+  const { receipts, load: loadReceipts } = useReceipts();
+  const pendingReceipts = receipts.filter((r: Receipt) => r.status === "pending" || r.id === form.receipt_id);
+
+  useEffect(() => {
+    if (!open) return;
+    if (form.client_id) {
+      loadReceipts({ client_id: form.client_id });
+    } else if (form.project_id) {
+      loadReceipts({ project_id: form.project_id });
+    }
+  }, [form.project_id, form.client_id, open, loadReceipts]);
+
   useEffect(() => {
     if (open && mode === "edit" && initialData) {
       setForm({
-        client_id:      initialData.client_id  ?? "",
-        project_id:     initialData.project_id ?? "",
+        client_id:      initialData.client_id      ?? "",
+        project_id:     initialData.project_id     ?? "",
+        receipt_id:     initialData.receipt_id     ?? "",
         amount:         String(initialData.amount),
-        payment_type:   initialData.payment_type,
+        payment_type:   initialData.payment_type   as "monetario" | "canje",
         payment_method: initialData.payment_method,
         date:           initialData.date,
-        description:    initialData.description ?? "",
+        description:    initialData.description    ?? "",
       });
     } else if (open && mode === "create") {
       setForm(EMPTY);
@@ -64,6 +92,23 @@ export default function RegisterIncomeModal({ open, onClose, onSave, currency, i
   }, [open, mode, initialData]);
 
   if (!open) return null;
+
+  function set(field: keyof typeof EMPTY, value: string) {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  }
+
+  function handleReceiptSelect(receiptId: string) {
+    const r = receiptId
+      ? pendingReceipts.find((r: Receipt) => r.id === receiptId)
+      : null;
+
+    setForm(prev => ({
+      ...prev,
+      receipt_id: receiptId,
+      ...(r               ? { amount:     String(r.amount) } : {}),
+      ...(r?.project_id   ? { project_id: r.project_id     } : {}),
+    }));
+  }
 
   function handleChange(field: keyof typeof EMPTY, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -80,17 +125,19 @@ export default function RegisterIncomeModal({ open, onClose, onSave, currency, i
     const project = projects.find((p) => p.id === form.project_id);
 
     onSave({
-      client_id:    form.client_id,
-      project_id:   form.project_id || null,
-      client_name:  client?.name  ?? "",
-      project_name: project?.name ?? "Sin proyecto",
-      amount:       parseFloat(form.amount),
+      client_id:      form.client_id,
+      project_id:     form.project_id     || null,
+      receipt_id:     form.receipt_id     || null,
+      client_name:    client?.name        ?? "",
+      project_name:   project?.name       ?? "Sin proyecto",
+      amount:         parseFloat(form.amount),
       currency,
       payment_type:   form.payment_type,
       payment_method: form.payment_type === "canje" ? "Canje" : form.payment_method,
-      date:        form.date,
-      description: form.description.trim() || undefined,
+      date:           form.date,
+      description:    form.description.trim() || undefined,
     });
+
     setForm(EMPTY);
     setError(null);
     onClose();
@@ -132,7 +179,12 @@ export default function RegisterIncomeModal({ open, onClose, onSave, currency, i
           <Field label="Cliente *">
             <select
               value={form.client_id}
-              onChange={(e) => handleChange("client_id", e.target.value)}
+              onChange={(e) => setForm(prev => ({
+                ...prev,
+                client_id:  e.target.value,
+                project_id: "",
+                receipt_id: "",
+              }))}
               className={INPUT_CLS}
             >
               <option value="">Seleccioná un cliente</option>
@@ -145,7 +197,11 @@ export default function RegisterIncomeModal({ open, onClose, onSave, currency, i
           <Field label="Proyecto (opcional)">
             <select
               value={form.project_id}
-              onChange={(e) => handleChange("project_id", e.target.value)}
+              onChange={(e) => setForm(prev => ({
+                ...prev,
+                project_id: e.target.value,
+                receipt_id: "",
+              }))}
               className={INPUT_CLS}
             >
               <option value="">Sin proyecto</option>
@@ -155,6 +211,34 @@ export default function RegisterIncomeModal({ open, onClose, onSave, currency, i
             </select>
           </Field>
 
+
+          {/* Receipt association — only shown when there are pending receipts */}
+          {(form.project_id || form.client_id) && pendingReceipts.length > 0 && (
+            <div className="rounded-xl border border-violet-100 bg-violet-50/60 p-3.5 space-y-2">
+              <p className="text-xs font-semibold text-violet-700 flex items-center gap-1.5">
+                <LinkIcon />
+                Asociar con recibo pendiente (opcional)
+              </p>
+              <select
+                value={form.receipt_id}
+                onChange={(e) => handleReceiptSelect(e.target.value)}
+                className={INPUT_CLS}
+              >
+                <option value="">Sin asociar</option>
+                {pendingReceipts.map((r: Receipt) => (
+                  <option key={r.id} value={r.id}>
+                    {r.concept} — {r.amount}
+                  </option>
+                ))}
+              </select>
+              {form.receipt_id && (
+                <p className="text-xs text-violet-500">
+                  ✓ El recibo se marcará como cobrado automáticamente.
+                </p>
+              )}
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-3">
             <Field label={`Monto (${currency}) *`}>
               <input
@@ -163,7 +247,8 @@ export default function RegisterIncomeModal({ open, onClose, onSave, currency, i
                 value={form.amount}
                 onChange={(e) => handleChange("amount", e.target.value)}
                 placeholder="ej: 1500"
-                className={INPUT_CLS}
+                readOnly={!!form.receipt_id} 
+                className={`${INPUT_CLS} ${form.receipt_id ? "opacity-60 bg-gray-100 cursor-not-allowed" : ""}`}
               />
             </Field>
             <Field label="Fecha">
@@ -227,7 +312,8 @@ export default function RegisterIncomeModal({ open, onClose, onSave, currency, i
 }
 
 const INPUT_CLS =
-  "w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-300 focus:border-transparent transition";
+  "w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-white text-gray-700 " +
+  "focus:outline-none focus:ring-2 focus:ring-green-300 focus:border-transparent transition";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -235,5 +321,14 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <label className="block text-xs font-medium text-gray-500 mb-1.5">{label}</label>
       {children}
     </div>
+  );
+}
+
+function LinkIcon() {
+  return (
+    <svg width="12" height="12" fill="none" viewBox="0 0 24 24">
+      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
   );
 }

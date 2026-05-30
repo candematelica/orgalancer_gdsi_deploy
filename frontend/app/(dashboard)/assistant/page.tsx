@@ -50,19 +50,19 @@ const CURRENCY_SYMBOL: Record<string, string> = {
 
 // [junior, mid, senior, expert] hourly rates by experience range
 const BENCHMARKS: Record<string, [number, number, number, number]> = {
-  "0-1":  [15, 22, 30, 40],
-  "1-3":  [25, 38, 50, 65],
-  "3-5":  [38, 55, 70, 88],
+  "0-1": [15, 22, 30, 40],
+  "1-3": [25, 38, 50, 65],
+  "3-5": [38, 55, 70, 88],
   "5-10": [55, 75, 92, 115],
-  "10+":  [75, 98, 118, 145],
+  "10+": [75, 98, 118, 145],
 };
 
 const YEARS_LABEL: Record<string, string> = {
-  "0-1":  "menos de 1 año",
-  "1-3":  "1 a 3 años",
-  "3-5":  "3 a 5 años",
+  "0-1": "menos de 1 año",
+  "1-3": "1 a 3 años",
+  "3-5": "3 a 5 años",
   "5-10": "5 a 10 años",
-  "10+":  "más de 10 años",
+  "10+": "más de 10 años",
 };
 
 const HOURS_MONTH = 160;
@@ -130,8 +130,8 @@ function analyze(fin: FinancialConfig, prof: UserProfile): Analysis {
     position === "Bajo"
       ? `Acción inmediata: Aumentá tu tarifa a ${sym}${suggested}/hora para nuevos clientes. Comunicá el valor adicional que aportás con tu trayectoria.`
       : position === "Medio"
-      ? `Tenés margen para subir a ${sym}${suggested}/hora. Presentá casos de éxito y métricas de impacto para justificar el aumento.`
-      : `Tu tarifa es competitiva. Para alcanzar ${sym}${suggested}/hora, enfocate en proyectos de alta complejidad y clientes corporativos.`,
+        ? `Tenés margen para subir a ${sym}${suggested}/hora. Presentá casos de éxito y métricas de impacto para justificar el aumento.`
+        : `Tu tarifa es competitiva. Para alcanzar ${sym}${suggested}/hora, enfocate en proyectos de alta complejidad y clientes corporativos.`,
     `Mediano plazo (3-6 meses): Especializate en un nicho de mayor valor${prof.specialty ? ` dentro de ${prof.specialty}` : ""}. Los clientes que buscan especialistas pagan tarifas premium.`,
   ];
 

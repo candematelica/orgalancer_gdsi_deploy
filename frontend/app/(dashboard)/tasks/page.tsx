@@ -1,11 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Plus, Clock, Check, Circle, CheckCircle2, CircleDot, Calendar, User, LayoutList, FolderOpen } from "lucide-react";
-import SectionHeader from "./../_components/section_header"
+import { useState, useEffect, useCallback } from "react";
+import { AlertOctagon, Clock, Check, Circle, CheckCircle, Calendar, LayoutList, FolderOpen, Tag, SlidersHorizontal } from "lucide-react";
+import SectionHeader from "./../_components/section_header";
 import TaskModal from "./_components/TaskModal";
 import TaskForm from "./_components/TaskForm";
 import TaskDetailModal from "./_components/TaskDetailModal";
+import { useTimerContext } from "../_lib/TimerContext";
+
+interface TagItem {
+  id: string;
+  name: string;
+}
 
 interface Task {
   id: string;
@@ -16,51 +22,83 @@ interface Task {
   project_id: string;
   project_name: string | null;
   status: string;
+  tags: TagItem[];
+}
+
+interface Project {
+  id: string;
+  name: string;
 }
 
 export default function TasksPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState("Todas");
 
-  const filters = ["Todas", "Pendientes", "En Progreso", "Completadas"];
+const [statusFilter, setStatusFilter] = useState("Todos los Estados");  const [projectFilter, setProjectFilter] = useState("Todos");
+  const [priorityFilter, setPriorityFilter] = useState("Todas");
+  const [availableTags, setAvailableTags] = useState<TagItem[]>([]);
+  const [selectedTagId, setSelectedTagId] = useState<string | null>(null);
 
-  const fetchTasks = async () => {
+const statusOptions = ["Todos los Estados", "Pendientes", "En Progreso", "Completadas", "Bloqueadas"];  const priorityOptions = ["Todas", "Baja", "Media", "Alta", "Urgente"];
+
+  const { setTask: setTimerTask, setIsOpen: setTimerOpen } = useTimerContext();
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
     try {
-      const token = localStorage.getItem("token");
-      if (!token) return;
+      const [tasksRes, projectsRes] = await Promise.all([
+        fetch(selectedTagId ? `/api/tasks?tag_id=${selectedTagId}` : "/api/tasks"),
+        fetch("/api/projects?state=active")
+      ]);
 
-      const res = await fetch("/api/tasks", {
-        headers: {
-          "Authorization": `Bearer ${token}`
-        }
-      });
-
-      const data = await res.json();
-      if (res.ok) {
-        setTasks(data);
+      if (tasksRes.ok) {
+        const tasksData = await tasksRes.json();
+        setTasks(tasksData);
       }
 
+      if (projectsRes.ok) {
+        const projectsData = await projectsRes.json();
+        setProjects(projectsData.map((p: any) => ({ id: p.id, name: p.name })));
+      }
     } catch (error) {
-      console.error("Error fetching tasks:", error);
+      console.error("Error fetching data:", error);
 
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedTagId]);
+
+  const fetchTags = async () => {
+  try {
+    const res = await fetch("/api/tasks/tags");
+    if (res.ok) setAvailableTags(await res.json());
+  } catch (error) {
+    console.error("Error fetching tags:", error);
+  }
+};
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   useEffect(() => {
-    fetchTasks();
+    fetchTags();
   }, []);
 
-  const handleSuccess = () => {
+  const handleSuccess = (isEdit: boolean) => {
     setIsModalOpen(false);
-    setToast({ message: "Tarea creada exitosamente", type: "success" });
+    setTaskToEdit(null);
+    setToast({
+      message: isEdit ? "Tarea actualizada exitosamente" : "Tarea creada exitosamente",
+      type: "success"
+    });
     setTimeout(() => setToast(null), 3000);
-    fetchTasks();
+    fetchData();
+    fetchTags();
   };
 
   const handleError = (msg: string) => {
@@ -68,41 +106,45 @@ export default function TasksPage() {
     setTimeout(() => setToast(null), 3000);
   };
 
+  const handleEditTask = (task: Task) => {
+    setSelectedTask(null);
+    setTaskToEdit(task);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setTaskToEdit(null);
+  };
+
   const handleStatusCycle = async (task: Task, e: React.MouseEvent) => {
     e.stopPropagation();
 
-    const statusOrder = ["Pendiente", "En Progreso", "Completada"];
+    const statusOrder = ["Pendiente", "En Progreso", "Completada", "Bloqueada"];
     const currentIndex = statusOrder.indexOf(task.status);
     const nextStatus = statusOrder[(currentIndex + 1) % statusOrder.length];
 
     setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: nextStatus } : t));
 
     try {
-      const token = localStorage.getItem("token");
       await fetch(`/api/tasks/${task.id}`, {
         method: "PATCH",
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({ status: nextStatus })
       });
-
     } catch (error) {
       console.error("Error updating status:", error);
-
-      fetchTasks();
+      fetchData();
       handleError("Error al actualizar el estado");
     }
   };
 
   const handleDeleteTask = async (taskId: string) => {
     try {
-      const token = localStorage.getItem("token");
-
       const res = await fetch(`/api/tasks/${taskId}`, {
-        method: "DELETE",
-        headers: { "Authorization": `Bearer ${token}` }
+        method: "DELETE"
       });
 
       if (!res.ok) {
@@ -113,8 +155,7 @@ export default function TasksPage() {
       setToast({ message: "Tarea eliminada exitosamente", type: "success" });
       setTimeout(() => setToast(null), 3000);
       setSelectedTask(null);
-      fetchTasks();
-
+      fetchData();
     } catch (error: any) {
       handleError(error.message || "Error al eliminar la tarea");
     }
@@ -128,17 +169,22 @@ export default function TasksPage() {
   };
 
   const filteredTasks = tasks.filter(task => {
-    if (filter === "Todas") return true;
-    if (filter === "Pendientes") return task.status === "Pendiente";
-    if (filter === "En Progreso") return task.status === "En Progreso";
-    if (filter === "Completadas") return task.status === "Completada";
-    return true;
+    let matchStatus = true;
+if (statusFilter === "Pendientes") matchStatus = task.status === "Pendiente";
+else if (statusFilter === "En Progreso") matchStatus = task.status === "En Progreso";
+else if (statusFilter === "Bloqueadas") matchStatus = task.status === "Bloqueada";
+else if (statusFilter === "Completadas") matchStatus = task.status === "Completada";
+
+    const matchProject = projectFilter === "Todos" || task.project_id === projectFilter;
+    const matchPriority = priorityFilter === "Todas" || task.priority === priorityFilter;
+
+    return matchStatus && matchProject && matchPriority;
   });
 
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <SectionHeader title="Tareas" subtitle="Organiza y prioriza tu trabajo" icon={<Check className="w-8 h-8 text-indigo-600"/>}>
+      <SectionHeader title="Tareas" subtitle="Organiza y prioriza tu trabajo" icon={<Check className="w-8 h-8 text-indigo-600" />}>
         <button
           onClick={() => setIsModalOpen(true)}
           className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-purple-500 text-white text-sm font-semibold hover:opacity-90 transition-opacity shadow"
@@ -148,26 +194,83 @@ export default function TasksPage() {
         </button>
       </SectionHeader>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-2 mb-6">
-        {filters.map((f) => (
+      <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4 mb-6 flex flex-col lg:flex-row lg:items-center justify-start gap-4 shadow-sm">
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-3">
+          <div className="flex items-center gap-2 text-gray-400 text-xs font-medium uppercase tracking-wider mr-1">
+            <SlidersHorizontal size={14} />
+            <span>Filtros:</span>
+          </div>
+
+          
+
+          {/* Selector de Proyectos */}
+          <select
+            value={projectFilter}
+            onChange={(e) => setProjectFilter(e.target.value)}
+            className="px-3 py-1.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-violet-400 cursor-pointer min-w-[140px]"
+          >
+            <option value="Todos">Todos los Proyectos</option>
+            {projects.map(p => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+
+          {/* Selector de Prioridades */}
+          <select
+            value={priorityFilter}
+            onChange={(e) => setPriorityFilter(e.target.value)}
+            className="px-3 py-1.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-violet-400 cursor-pointer min-w-[140px]"
+          >
+            <option value="Todas">Todas las Prioridades</option>
+            {priorityOptions.filter(o => o !== "Todas").map(o => (
+              <option key={o} value={o}>{o}</option>
+            ))}
+          </select>
+          {/* Selector de Estado */}
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-3 py-1.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-violet-400 cursor-pointer min-w-[140px]"
+          >
+            {statusOptions.map(o => (
+              <option key={o} value={o}>{o}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Tag filters */}
+      {availableTags.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-5 items-center">
+          <Tag className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
           <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`px-4 py-1.5 rounded-full text-sm transition-colors border ${filter === f
-              ? "bg-violet-100 text-violet-700 font-semibold border-transparent shadow-sm"
-              : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50 hover:text-violet-600 shadow-sm"
+            onClick={() => setSelectedTagId(null)}
+            className={`px-3 py-1 rounded-full text-xs transition-colors border ${selectedTagId === null
+              ? "bg-violet-100 text-violet-700 font-semibold border-transparent"
+              : "bg-white text-gray-400 border-gray-200 hover:text-violet-600"
               }`}
           >
-            {f}
+            Todas las etiquetas
           </button>
-        ))}
-      </div>
+          {availableTags.map(tag => (
+            <button
+              key={tag.id}
+              onClick={() => setSelectedTagId(selectedTagId === tag.id ? null : tag.id)}
+              className={`px-3 py-1 rounded-full text-xs transition-colors border ${selectedTagId === tag.id
+                ? "bg-violet-100 text-violet-700 font-semibold border-violet-200"
+                : "bg-white text-gray-400 border-gray-200 hover:text-violet-600 hover:border-violet-200"
+                }`}
+            >
+              {tag.name}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Contenido */}
       {loading ? (
         <div className="flex-1 flex items-center justify-center">
-          <p className="text-sm text-gray-400">Cargando tareas...</p>
+          <p className="text-sm text-gray-400 animate-pulse">Cargando tus tareas...</p>
         </div>
       ) : filteredTasks.length === 0 ? (
         <div className="flex-1 flex items-center justify-center mt-6">
@@ -188,8 +291,9 @@ export default function TasksPage() {
               </button>
             </div>
           ) : (
-            <div className="text-center text-gray-400">
-              <p>No hay tareas que coincidan con "{filter}"</p>
+            <div className="text-center bg-gray-50 border border-gray-100 rounded-2xl p-8 text-gray-400 max-w-sm mx-auto">
+              <p className="font-medium text-gray-600 mb-1">Sin resultados</p>
+              <p className="text-xs">No hay tareas que coincidan con los criterios seleccionados.</p>
             </div>
           )}
         </div>
@@ -208,9 +312,11 @@ export default function TasksPage() {
                   title="Cambiar estado"
                 >
                   {task.status === "Completada" ? (
-                    <CheckCircle2 className="text-green-500" size={24} />
+                    <CheckCircle className="text-green-500" size={24} />
                   ) : task.status === "En Progreso" ? (
-                    <CircleDot className="text-yellow-500" size={24} />
+                    <Clock className="text-yellow-500" size={24} />
+                  ) : task.status === "Bloqueada" ? (
+                    <AlertOctagon className="text-orange-400" size={24} />
                   ) : (
                     <Circle className="text-gray-300" size={24} />
                   )}
@@ -231,11 +337,34 @@ export default function TasksPage() {
                         {task.priority}
                       </span>
                     </div>
+                    {task.tags?.map(tag => (
+                      <span
+                        key={tag.id}
+                        className="px-2 py-0.5 rounded-full text-xs font-medium bg-violet-50 text-violet-600 border border-violet-100"
+                      >
+                        {tag.name}
+                      </span>
+                    ))}
                   </div>
                 </div>
               </div>
 
-              <div className="flex items-center ml-10 sm:ml-0">
+              <div className="flex items-center gap-2 ml-10 sm:ml-0">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setTimerTask({
+                      id: task.id,
+                      title: task.title,
+                      project_id: task.project_id,
+                    });
+                    setTimerOpen(true);
+                  }}
+                  className="p-2 rounded-lg hover:bg-purple-100 text-purple-500 hover:text-purple-600 transition-colors opacity-0 group-hover:opacity-100"
+                  title="Registrar tiempo"
+                >
+                  <Clock className="w-5 h-5" />
+                </button>
                 <div className="w-8 flex justify-end opacity-0 group-hover:opacity-100 transition-opacity text-gray-400">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M5 12h14M12 5l7 7-7 7" />
@@ -248,8 +377,14 @@ export default function TasksPage() {
       )}
 
       {/* Modals */}
-      <TaskModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
-        <TaskForm onSuccess={handleSuccess} onError={handleError} onClose={() => setIsModalOpen(false)} />
+      <TaskModal isOpen={isModalOpen} onClose={handleCloseModal}>
+        <TaskForm
+          key={taskToEdit ? taskToEdit.id : "new-task"}
+          taskToEdit={taskToEdit}
+          onSuccess={handleSuccess}
+          onError={handleError}
+          onClose={handleCloseModal}
+        />
       </TaskModal>
 
       {selectedTask && (
@@ -257,6 +392,7 @@ export default function TasksPage() {
           task={selectedTask}
           onClose={() => setSelectedTask(null)}
           onDelete={handleDeleteTask}
+          onEdit={handleEditTask}
         />
       )}
 

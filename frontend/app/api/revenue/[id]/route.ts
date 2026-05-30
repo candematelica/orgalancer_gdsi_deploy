@@ -1,20 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
 import { parseBody, extractErrorMsg } from "../../utils";
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const token = req.headers.get("Authorization");
-    const body  = await req.json();
+    const { id } = await params;
+    const token = req.cookies.get("token")?.value;
+    const body = await req.json();
 
-    const res = await fetch(`${process.env.API_URL}/revenue/${params.id}`, {
+    const res = await fetch(`${process.env.API_URL}/revenue/${id}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json", Authorization: token || "" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: token ? `Bearer ${token}` : "",
+      },
       body: JSON.stringify(body),
     });
 
     const data = await parseBody(res);
     if (!res.ok)
-      return NextResponse.json({ error: extractErrorMsg(data, "Error al actualizar el ingreso") }, { status: res.status });
+      return NextResponse.json(
+        { error: extractErrorMsg(data, "Error al actualizar el ingreso") },
+        { status: res.status }
+      );
 
     return NextResponse.json(data);
   } catch (err) {
@@ -23,18 +33,27 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const token = req.headers.get("Authorization");
+    const { id } = await params;
+    const token = req.cookies.get("token")?.value;
 
-    const res = await fetch(`${process.env.API_URL}/revenue/${params.id}`, {
+    const res = await fetch(`${process.env.API_URL}/revenue/${id}`, {
       method: "DELETE",
-      headers: { Authorization: token || "" },
+      headers: {
+        Authorization: token ? `Bearer ${token}` : "",
+      },
     });
 
     if (!res.ok) {
       const data = await parseBody(res);
-      return NextResponse.json({ error: extractErrorMsg(data, "Error al eliminar el ingreso") }, { status: res.status });
+      return NextResponse.json(
+        { error: extractErrorMsg(data, "Error al eliminar el ingreso") },
+        { status: res.status }
+      );
     }
 
     return new NextResponse(null, { status: 204 });

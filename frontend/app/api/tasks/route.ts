@@ -3,10 +3,17 @@ import { parseBody, extractErrorMsg } from "../utils";
 
 export async function GET(req: NextRequest) {
   try {
-    const token = req.headers.get("Authorization");
+    const token = req.cookies.get("token")?.value;
+    const { searchParams } = new URL(req.url);
+    const tagId = searchParams.get("tag_id");
+    const url = tagId
+      ? `${process.env.API_URL}/tasks/?tag_id=${tagId}`
+      : `${process.env.API_URL}/tasks/`;
 
-    const response = await fetch(`${process.env.API_URL}/tasks/`, {
-      headers: { "Authorization": token || "" },
+    const response = await fetch(url, {
+      headers: {
+        Authorization: token ? `Bearer ${token}` : ""
+      },
       cache: "no-store",
     });
 
@@ -24,12 +31,15 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const token = req.headers.get("Authorization");
+    const token = req.cookies.get("token")?.value
     const body = await req.json();
 
     const response = await fetch(`${process.env.API_URL}/tasks/`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": token || "" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: token ? `Bearer ${token}` : ""
+      },
       body: JSON.stringify(body),
     });
 

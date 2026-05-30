@@ -1,9 +1,10 @@
 import uuid
-from sqlalchemy import Column, String, Float, ForeignKey, Date, Numeric
+from sqlalchemy import Column, String, Float, ForeignKey, Date, Numeric, Boolean, Table, DateTime
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import relationship
 from app.database import Base
 import enum
+
 
 class User(Base):
     __tablename__ = "users"
@@ -20,8 +21,10 @@ class User(Base):
     years_of_experience = Column(String, nullable=True)
 
     financial_config = relationship("FinancialConfiguration", back_populates="user", uselist=False)
-    
+
     projects = relationship("Project", back_populates="user", cascade="all, delete-orphan")
+
+    time_entries = relationship("TimeEntry", back_populates="user", cascade="all, delete-orphan")
 
 class FinancialConfiguration(Base):
     __tablename__ = "financial_configurations"
@@ -37,6 +40,7 @@ class FinancialConfiguration(Base):
 
     user = relationship("User", back_populates="financial_config")
 
+
 class Client(Base):
     __tablename__ = "clients"
 
@@ -49,18 +53,22 @@ class Client(Base):
     address = Column(String, nullable=True)
     website = Column(String, nullable=True)
     extra_info = Column(String, nullable=True)
+    is_deleted = Column(Boolean, nullable=False, default=False)
 
     projects = relationship("Project", back_populates="client")
+
 
 class ContractType(enum.Enum):
     hourly = "hourly"
     fixed_price = "fixed_price"
     retainer = "retainer"
 
+
 class ProjectState(enum.Enum):
     active = "active"
     completed = "completed"
     cancelled = "cancelled"
+
 
 class Project(Base):
     __tablename__ = "projects"
@@ -68,24 +76,52 @@ class Project(Base):
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
     client_id = Column(String, ForeignKey("clients.id"), nullable=True, index=True)
-    
+
     name = Column(String, nullable=False)
     description = Column(String, nullable=True)
-    contract_type = Column( SQLEnum(ContractType), nullable=False)
+    contract_type = Column(SQLEnum(ContractType), nullable=False)
     estimated_budget = Column(Numeric(10, 2), nullable=False, default=0.00)
     earned = Column(Numeric(10, 2), nullable=False, default=0.00)
-    start_date = Column(Date,  nullable=True)
+    start_date = Column(Date, nullable=True)
     deadline = Column(Date, nullable=True)
-    state = Column( SQLEnum(ProjectState), nullable=False, default=ProjectState.active)
+    state = Column(SQLEnum(ProjectState), nullable=False, default=ProjectState.active)
 
     user = relationship("User", back_populates="projects")
     client = relationship("Client", back_populates="projects")
     tasks = relationship("Task", back_populates="project", cascade="all, delete-orphan")
+    time_entries = relationship("TimeEntry", back_populates="project", cascade="all, delete-orphan")
+
 
 class TaskStatus(str, enum.Enum):
     pending = "Pendiente"
     in_progress = "En Progreso"
     completed = "Completada"
+    blocked = "Bloqueada"
+
+class TaskPriority(str, enum.Enum):
+    low = "Baja"
+    medium = "Media"
+    high = "Alta"
+    urgent = "Urgente"
+
+
+task_tags = Table(
+    "task_tags",
+    Base.metadata,
+    Column("task_id", String, ForeignKey("tasks.id", ondelete="CASCADE"), primary_key=True),
+    Column("tag_id", String, ForeignKey("tags.id", ondelete="CASCADE"), primary_key=True),
+)
+
+
+class Tag(Base):
+    __tablename__ = "tags"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    name = Column(String(50), nullable=False)
+
+    tasks = relationship("Task", secondary=task_tags, back_populates="tags")
+
 
 class Task(Base):
     __tablename__ = "tasks"
@@ -95,15 +131,41 @@ class Task(Base):
     project_id = Column(String, ForeignKey("projects.id"), nullable=False, index=True)
     title = Column(String(100), nullable=False)
     description = Column(String, nullable=False)
-    priority = Column(String, nullable=False)
+    priority = Column(SQLEnum(TaskPriority), default = TaskPriority.medium, nullable=False)
     target_date = Column(String, nullable=False)
     status = Column(SQLEnum(TaskStatus), default=TaskStatus.pending, nullable=False)
     created_at = Column(String, nullable=False)
     updated_at = Column(String, nullable=False)
 
+    tags = relationship("Tag", secondary=task_tags, back_populates="tasks")
     user = relationship("User")
     project = relationship("Project", back_populates="tasks")
+    time_entries = relationship("TimeEntry", back_populates="task", cascade="all, delete-orphan")
 
+    @property
+    def project_name(self) -> str | None:
+        return self.project.name if self.project else None
+
+class TimeSource(enum.Enum):
+    manual = "manual"
+    timer = "timer"
+
+class TimeEntry(Base):
+    __tablename__ = "time_entries"
+    id               = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id          = Column(String, ForeignKey("users.id"), nullable=False)
+    project_id       = Column(String, ForeignKey("projects.id"), nullable=False)
+    task_id          = Column(String, ForeignKey("tasks.id"), nullable=True)
+    entry_date       = Column(Date, nullable=False)
+    duration_minutes = Column(Numeric(10, 2), nullable=False)
+    description      = Column(String, nullable=True)
+    source           = Column(SQLEnum(TimeSource), default=TimeSource.manual)
+    created_at       = Column(DateTime, nullable=False)
+
+    user    = relationship("User", back_populates="time_entries")
+    project = relationship("Project", back_populates="time_entries")
+    task    = relationship("Task", back_populates="time_entries", foreign_keys=[task_id])
+      
 class Revenue(Base):
     __tablename__ = "revenue_entries"
 
@@ -118,7 +180,33 @@ class Revenue(Base):
     payment_type = Column(String, nullable=False)    
     payment_method = Column(String, nullable=True)  
     description = Column(String, nullable=True)
+    receipt_id = Column(String, ForeignKey("receipts.id"), nullable=True, index=True)
 
     user = relationship("User")
     project = relationship("Project")
     client = relationship("Client")
+    receipt = relationship("Receipt", back_populates="revenue_entries")
+
+
+class ReceiptStatus(str, enum.Enum):
+    pending   = "pending"
+    paid      = "paid"
+    cancelled = "cancelled"
+
+
+class Receipt(Base):
+    __tablename__ = "receipts"
+
+    id           = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id      = Column(String, ForeignKey("users.id"),    nullable=False, index=True)
+    project_id   = Column(String, ForeignKey("projects.id"), nullable=True,  index=True)
+    client_id    = Column(String, ForeignKey("clients.id"),  nullable=True,  index=True)
+    amount       = Column(Numeric(10, 2), nullable=False)
+    concept      = Column(String, nullable=False)
+    date_emitted = Column(Date, nullable=False)
+    status       = Column(SQLEnum(ReceiptStatus), nullable=False, default=ReceiptStatus.pending)
+
+    user            = relationship("User")
+    project         = relationship("Project")
+    client          = relationship("Client")
+    revenue_entries = relationship("Revenue", back_populates="receipt")
