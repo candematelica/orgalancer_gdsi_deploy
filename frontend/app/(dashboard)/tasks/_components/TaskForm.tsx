@@ -216,7 +216,7 @@ export default function TaskForm({ taskToEdit, onSuccess, onError, onClose }: Ta
 
   const statusStyles: Record<string, string> = {
     "Pendiente": "border-gray-300 bg-gray-100 text-gray-700 focus:ring-gray-400",
-    "En Progreso": "border-blue-300 bg-blue-100 text-blue-700 focus:ring-blue-400",
+    "En Progreso": "border-yellow-300 bg-yellow-100 text-yellow-700 focus:ring-yellow-400",
     "Completada": "border-green-300 bg-green-100 text-green-700 focus:ring-green-400",
     "Bloqueada": "border-orange-300 bg-orange-100 text-orange-700 focus:ring-orange-400",
   };
@@ -306,7 +306,7 @@ export default function TaskForm({ taskToEdit, onSuccess, onError, onClose }: Ta
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Prioridad <span className="text-red-500">*</span>
+          Prioridad
         </label>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {PRIORITIES.map(p => (
@@ -327,7 +327,7 @@ export default function TaskForm({ taskToEdit, onSuccess, onError, onClose }: Ta
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Estado <span className="text-red-500">*</span>
+          Estado
         </label>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {STATUSES.map(s => (
