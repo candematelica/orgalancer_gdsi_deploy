@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { AlertOctagon, Clock, Check, Circle, CheckCircle, Calendar, LayoutList, FolderOpen, Tag, SlidersHorizontal } from "lucide-react";
+import { AlertOctagon, Clock, Check, Circle, CheckCircle, Calendar, LayoutList, FolderOpen, Tag, SlidersHorizontal, ChevronDown } from "lucide-react";
 import SectionHeader from "./../_components/section_header";
 import TaskModal from "./_components/TaskModal";
 import TaskForm from "./_components/TaskForm";
@@ -44,7 +44,9 @@ const [statusFilter, setStatusFilter] = useState("Todos los Estados");  const [p
   const [availableTags, setAvailableTags] = useState<TagItem[]>([]);
   const [selectedTagId, setSelectedTagId] = useState<string | null>(null);
 
-const statusOptions = ["Todos los Estados", "Pendientes", "En Progreso", "Completadas", "Bloqueadas"];  const priorityOptions = ["Todas", "Baja", "Media", "Alta", "Urgente"];
+  const taskStatuses = ["Pendiente", "En Progreso", "Completada", "Bloqueada"];
+  const statusOptions = ["Todas", "Pendientes", "En Progreso", "Completadas", "Bloqueadas"];
+  const priorityOptions = ["Todas", "Baja", "Media", "Alta", "Urgente"];
 
   const { setTask: setTimerTask, setIsOpen: setTimerOpen } = useTimerContext();
 
@@ -67,20 +69,20 @@ const statusOptions = ["Todos los Estados", "Pendientes", "En Progreso", "Comple
       }
     } catch (error) {
       console.error("Error fetching data:", error);
-
     } finally {
       setLoading(false);
     }
   }, [selectedTagId]);
 
   const fetchTags = async () => {
-  try {
-    const res = await fetch("/api/tasks/tags");
-    if (res.ok) setAvailableTags(await res.json());
-  } catch (error) {
-    console.error("Error fetching tags:", error);
-  }
-};
+    try {
+      const res = await fetch("/api/tasks/tags");
+      if (res.ok) setAvailableTags(await res.json());
+    } catch (error) {
+      console.error("Error fetching tags:", error);
+    }
+  };
+
   useEffect(() => {
     fetchData();
   }, [fetchData]);
@@ -117,13 +119,7 @@ const statusOptions = ["Todos los Estados", "Pendientes", "En Progreso", "Comple
     setTaskToEdit(null);
   };
 
-  const handleStatusCycle = async (task: Task, e: React.MouseEvent) => {
-    e.stopPropagation();
-
-    const statusOrder = ["Pendiente", "En Progreso", "Completada", "Bloqueada"];
-    const currentIndex = statusOrder.indexOf(task.status);
-    const nextStatus = statusOrder[(currentIndex + 1) % statusOrder.length];
-
+  const handleStatusChange = async (task: Task, nextStatus: string) => {
     setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: nextStatus } : t));
 
     try {
@@ -306,11 +302,7 @@ else if (statusFilter === "Completadas") matchStatus = task.status === "Completa
               className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md hover:bg-violet-50/30 transition-all cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4 group"
             >
               <div className="flex items-start gap-4 flex-1">
-                <button
-                  onClick={(e) => handleStatusCycle(task, e)}
-                  className="mt-1 flex-shrink-0 hover:scale-110 transition-transform focus:outline-none"
-                  title="Cambiar estado"
-                >
+                <div className="mt-1 flex-shrink-0" title={`Estado: ${task.status}`}>
                   {task.status === "Completada" ? (
                     <CheckCircle className="text-green-500" size={24} />
                   ) : task.status === "En Progreso" ? (
@@ -320,7 +312,8 @@ else if (statusFilter === "Completadas") matchStatus = task.status === "Completa
                   ) : (
                     <Circle className="text-gray-300" size={24} />
                   )}
-                </button>
+                </div>
+
                 <div className="flex-1">
                   <h3 className="font-semibold text-gray-800 text-base">{task.title}</h3>
                   <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-2">
@@ -349,7 +342,22 @@ else if (statusFilter === "Completadas") matchStatus = task.status === "Completa
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 ml-10 sm:ml-0">
+              <div className="flex items-center gap-3 ml-10 sm:ml-0">
+                <div className="relative" onClick={(e) => e.stopPropagation()}>
+                  <select
+                    value={task.status}
+                    onChange={(e) => handleStatusChange(task, e.target.value)}
+                    className="appearance-none pl-3 pr-8 py-1.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-violet-400 cursor-pointer transition-colors"
+                  >
+                    {taskStatuses.map((status) => (
+                      <option key={status} value={status}>
+                        {status}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                </div>
+
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -365,11 +373,6 @@ else if (statusFilter === "Completadas") matchStatus = task.status === "Completa
                 >
                   <Clock className="w-5 h-5" />
                 </button>
-                <div className="w-8 flex justify-end opacity-0 group-hover:opacity-100 transition-opacity text-gray-400">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M5 12h14M12 5l7 7-7 7" />
-                  </svg>
-                </div>
               </div>
             </div>
           ))}
