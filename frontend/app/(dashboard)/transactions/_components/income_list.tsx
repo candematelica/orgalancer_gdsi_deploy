@@ -19,6 +19,7 @@ export interface Transaction {
 
 interface Props {
   transactions: Transaction[];
+  currency:       string;
   onEdit?: (tx: Transaction) => void;
   onViewReceipt?: (receiptId: string) => void;
   onDelete?: (id: string) => void;
@@ -37,7 +38,7 @@ function formatDate(dateStr: string) {
   return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
 }
 
-export default function TransactionList({ transactions, onEdit, onDelete, onViewReceipt }: Props) {
+export default function TransactionList({ transactions, currency, onEdit, onDelete, onViewReceipt }: Props) {
   if (transactions.length === 0) {
     return (
       <div className="text-center py-12 text-gray-400 text-sm">
@@ -60,7 +61,6 @@ export default function TransactionList({ transactions, onEdit, onDelete, onView
               </svg>
             </div>
 
-            {/* Info */}
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-gray-800 truncate">{tx.project_name}</p>
               <p className="text-xs text-gray-400">{tx.client_name}</p>
@@ -71,16 +71,14 @@ export default function TransactionList({ transactions, onEdit, onDelete, onView
               )}
             </div>
 
-            {/* Amount + meta */}
             <div className="text-right flex-shrink-0">
               <p className="text-sm font-bold text-green-600">
-                {tx.currency}{tx.amount.toLocaleString("es-ES")}
+                {currency}{tx.amount.toLocaleString("es-ES")}
               </p>
               <p className="text-xs text-gray-400">{formatDate(tx.date)}</p>
               <p className="text-xs text-gray-400">{tx.payment_method}</p>
             </div>
 
-            {/* Actions */}
             {(onEdit || onDelete || onViewReceipt) && (
               <div className="flex gap-1 flex-shrink-0 ml-2 items-center">
                 <div className="w-8 h-8 flex items-center justify-center">
