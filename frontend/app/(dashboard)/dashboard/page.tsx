@@ -1,3 +1,5 @@
+"use client";
+
 import { Sparkles } from 'lucide-react';
 
 import StatCard from "./_components/stat_card";
