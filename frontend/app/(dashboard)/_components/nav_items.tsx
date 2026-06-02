@@ -41,6 +41,16 @@ export const NAV_ITEMS = [
     ),
   },
   {
+    label: "Presupuestos",
+    href: "/budget",
+    icon: (
+      <svg width="18" height="18" fill="none" viewBox="0 0 24 24">
+        <rect x="4" y="2" width="16" height="20" rx="2" stroke="currentColor" strokeWidth="1.5" />
+        <path d="M8 7h8M8 11h8M8 15h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+  {
     label: "Finanzas",
     href: "/finances",
     icon: <TrendingUp size={18} />,
