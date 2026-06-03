@@ -11,7 +11,7 @@ export interface ExpenseCategory {
 
 export interface Expense {
   id: string;
-  category_id: string;
+  category_id: string | null;
   category_name: string | null;
   category_color: string | null;
   project_id: string | null;

@@ -15,7 +15,7 @@ interface Props {
   onRemoveCategory: (id: string) => Promise<boolean>;
   categories:       ExpenseCategory[];
   currency:         string;
-  initialData?:     Expense;
+  initialData?:     Expense | null;
   mode?:            "create" | "edit";
 }
 
@@ -76,7 +76,7 @@ export default function RegisterExpenseModal({
     if (!open) return;
     if (mode === "edit" && initialData) {
       setForm({
-        category_id: initialData.category_id,
+        category_id: initialData.category_id ?? "",
         project_id:  initialData.project_id  ?? "",
         amount:      String(initialData.amount),
         date:        initialData.date,

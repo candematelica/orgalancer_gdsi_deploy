@@ -15,6 +15,7 @@ import TimesTab      from "./_components/tabs/times_tab";
 import DocumentsTab  from "./_components/tabs/documents_tab";
 import ReceiptsTab from "./_components/tabs/receipts_tab";
 import NotesTab      from "./_components/tabs/notes_tab";
+import ProfitabilityTab from "./_components/tabs/profitability_tab";
 
 import EditProjectPanel from "../_components/edit_project_panel";
 
@@ -74,6 +75,7 @@ export default function ProjectDetailPage() {
       case "documents":  return <DocumentsTab projectId={project.id} />;
       case "receipts": return (<ReceiptsTab projectId={project.id} clientId={project.client_id} clientName={project.client_name}/>);
       case "notes":      return <NotesTab     projectId={project.id} />;
+      case "rentabilidad": return <ProfitabilityTab projectId={project.id} />;
       default:           return null;
     }
   };
