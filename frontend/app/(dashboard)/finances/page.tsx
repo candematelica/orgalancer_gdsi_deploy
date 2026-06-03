@@ -7,6 +7,7 @@ import FinancesShell from "./_components/finances_shell";
 import FinancialForm from "./_components/financial_form";
 import TariffCalculator from "./_components/tariff_calculator";
 import { useFinancialForm } from "./_hooks/use_financial_form";
+import ExpensesShell from "./_components/expenses_shell";
 
 interface StoredUser {
   id: string;
@@ -37,6 +38,12 @@ export default function FinancesPage() {
         <div className="max-w-2xl w-full">
           <FinancesShell title="Configuración Financiera">
             <FinancialForm {...form} />
+          </FinancesShell>
+        </div>
+
+        <div className="w-full">
+          <FinancesShell title="Gastos">
+            <ExpensesShell currency={form.formData.coin_type} />
           </FinancesShell>
         </div>
 
