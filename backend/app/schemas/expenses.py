@@ -43,7 +43,7 @@ class ExpenseCategoryResponse(BaseModel):
 
 
 class ExpenseCreate(BaseModel):
-    category_id: str
+    category_id: Optional[str] = None
     amount:      float
     currency:    str
     date:        Date
@@ -72,7 +72,7 @@ class ExpenseUpdate(BaseModel):
 class ExpenseResponse(BaseModel):
     id:            str
     user_id:       str
-    category_id:   str
+    category_id: Optional[str] = None
     category_name: Optional[str] = None
     category_color: Optional[str] = None
     project_id:    Optional[str] = None

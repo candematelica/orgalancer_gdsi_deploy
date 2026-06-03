@@ -67,11 +67,10 @@ export default function NotificationItem({ notification, onMarkRead, onDelete }:
 
   return (
     <div
-      className={`group flex items-start gap-4 p-4 rounded-xl border transition-all duration-200 ${
-        notification.read
-          ? "bg-white border-gray-100"
-          : "bg-indigo-50/40 border-indigo-100"
-      }`}
+      className={`group flex items-start gap-4 p-4 rounded-xl border transition-all duration-200 ${notification.read
+        ? "bg-white border-gray-100"
+        : "bg-indigo-50/40 border-indigo-100"
+        }`}
     >
       {/* Icon */}
       <div className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center ${cfg.bg} ${cfg.color}`}>
