@@ -103,7 +103,7 @@ export default function TimeByProjectChart({ clientId }: Props) {
             cx="50%"
             cy="50%"
             outerRadius={80}
-            label={({ name, hours }) => `${name} (${hours}h)`}
+            label={({ name, hours }: { name?: string; hours?: number }) => `${name} (${hours}h)`}
             labelLine={false}
           >
             {data.map((_, index) => (
