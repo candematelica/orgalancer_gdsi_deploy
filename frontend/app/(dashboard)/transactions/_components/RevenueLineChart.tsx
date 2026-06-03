@@ -115,7 +115,7 @@ export default function RevenueLineChart() {
             tickFormatter={(v) => `${symbol}${v}`}
           />
           <Tooltip
-            formatter={(value: number, name: string) => [
+            formatter={(value, name) => [
               `${symbol}${value}`,
               name === "real" ? "Ingresos reales" : "Proyección",
             ]}

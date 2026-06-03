@@ -110,7 +110,7 @@ export default function TimeByProjectChart({ clientId }: Props) {
               <Cell key={index} fill={COLORS[index % COLORS.length]} />
             ))}
           </Pie>
-          <Tooltip formatter={(value: number) => [`${value}h`, "Horas"]} contentStyle={{ borderRadius: "12px", border: "1px solid #e5e7eb", fontSize: 12 }} />
+          <Tooltip formatter={(value) => [`${value}h`, "Horas"]} contentStyle={{ borderRadius: "12px", border: "1px solid #e5e7eb", fontSize: 12 }} />
           <Legend formatter={(value) => <span style={{ fontSize: 12, color: "#6b7280" }}>{value}</span>} />
         </PieChart>
       </ResponsiveContainer>
