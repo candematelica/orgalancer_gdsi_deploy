@@ -1,9 +1,12 @@
+"use client";
+
 import { Sparkles } from 'lucide-react';
 
 import StatCard from "./_components/stat_card";
 import PendingTasks from "./_components/pending_tasks";
 import PaymentReminders from "./_components/payment_reminders";
 import SectionHeader from "./../_components/section_header";
+import MonthlyRevenueChart from "./_components/MonthlyRevenueChart";
 
 const stats = [
   {
@@ -71,6 +74,11 @@ export default function DashboardPage() {
         {stats.map((stat) => (
           <StatCard key={stat.label} {...stat} />
         ))}
+      </div>
+
+      {/* Monthly revenue chart */}
+      <div className="mb-6">
+        <MonthlyRevenueChart />
       </div>
 
       {/* Bottom grid */}

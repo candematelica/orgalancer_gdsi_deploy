@@ -13,6 +13,7 @@ import { type Receipt }                      from "./../_receipts/types";
 import ExpenseStatCards                      from "./_components/expense_stats";
 import ExpenseList                           from "./_components/expense_list";
 import RegisterExpenseModal                  from "./_components/register_expense_modal";
+import RevenueLineChart                      from "./_components/RevenueLineChart";
 
 // shared style tokens
 const FILTER_SELECT = "w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-300";
@@ -168,7 +169,10 @@ export default function RevenuePage() {
           {error   && <p className="text-sm text-red-500  mt-4">{error}</p>}
 
           {!loading && !error && activeTab === "general" && (
-            <RevenueStatCards transactions={transactions} currency={currency} />
+            <>
+              <RevenueStatCards transactions={transactions} currency={currency} />
+              <RevenueLineChart />
+            </>
           )}
 
           <SectionTabs
