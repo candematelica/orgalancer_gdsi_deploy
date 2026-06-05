@@ -213,7 +213,7 @@ export default function PortalClient({ project, freelancerName }: Props) {
     const daysColor = days !== null && days < 7 ? "text-red-300" : "text-indigo-200";
 
     return (
-        <div className="min-h-screen font-sans" style={{ background: "linear-gradient(135deg, #1a0533 0%, #2d0a5e 40%, #1a1a4e 100%)" }}>
+        <div className="min-h-screen font-sans" style={{ background: "linear-gradient(135deg, #1a0533 0%, #2d0a5e 40%, #4a0a3e 70%, #2d0a2a 100%)" }}>
 
             {/* Header */}
             <div className="border-b border-white/10 backdrop-blur-sm bg-white/5">
@@ -280,7 +280,7 @@ export default function PortalClient({ project, freelancerName }: Props) {
 
                 {/* Payment history */}
                 {receipts.length > 0 && (
-                    <div className="rounded-2xl border border-white/10 overflow-hidden" style={{ background: "rgba(255,255,255,0.04)", backdropFilter: "blur(12px)" }}>
+                    <div className="rounded-2xl border border-white/10 overflow-hidden" style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.15)", backdropFilter: "blur(12px)" }}>
                         <button
                             onClick={() => setPaymentsExpanded((p) => !p)}
                             className="w-full flex items-center justify-between px-6 py-4 hover:bg-white/5 transition-colors"
@@ -301,7 +301,8 @@ export default function PortalClient({ project, freelancerName }: Props) {
                         {paymentsExpanded && (
                             <div className="divide-y divide-white/5">
                                 {receipts.map((receipt) => (
-                                    <div key={receipt.id} className="flex items-center justify-between px-6 py-4 gap-4">
+                                    <div key={receipt.id} className="flex items-center justify-between px-6 py-4 gap-4 bg-white/5 mx-3 mb-2 rounded-xl border border-white/10"
+                                    >
                                         <div className="flex items-center gap-3 min-w-0">
                                             {receipt.status === "paid"
                                                 ? <CheckCheck className="w-5 h-5 text-green-400 shrink-0" />
@@ -366,7 +367,8 @@ export default function PortalClient({ project, freelancerName }: Props) {
                         {tasksExpanded && (
                             <div className="divide-y divide-white/5">
                                 {tasks.map((task) => (
-                                    <div key={task.id} className="flex items-center justify-between px-6 py-3.5">
+                                    <div key={task.id} className="flex items-center justify-between px-6 py-3.5 bg-white/5 mx-3 mb-2 rounded-xl border border-white/10"
+                                    >
                                         <div className="flex items-center gap-3">
                                             {taskIcon(task.status)}
                                             <span className={`text-sm ${task.status === "Completada" ? "line-through text-white/40" : "text-white/80"}`}>
