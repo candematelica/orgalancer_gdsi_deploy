@@ -24,7 +24,7 @@ interface Project {
     id: string;
     name: string;
     description?: string;
-    status: string;
+    state: string;
     progress_percentage: number;
     start_date?: string;
     deadline?: string;
@@ -115,6 +115,7 @@ export default function PortalClient({ project, tasks, freelancerName }: Props) 
                 <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-400 to-indigo-500 flex items-center justify-center text-white font-bold text-sm">
+                            O
                         </div>
                         <span className="text-white/80 text-sm font-medium">
                             Orgalancer · Portal del cliente
@@ -152,15 +153,15 @@ export default function PortalClient({ project, tasks, freelancerName }: Props) 
                         <span
                             className={`
                 shrink-0 px-3 py-1 rounded-full text-xs font-semibold
-                ${project.status === "active" || project.status === "in_progress"
+                ${project.state === "active" || project.state === "in_progress"
                                     ? "bg-indigo-500/30 text-indigo-200 border border-indigo-400/30"
-                                    : project.status === "completed"
+                                    : project.state === "completed"
                                         ? "bg-purple-500/30 text-purple-200 border border-purple-400/30"
                                         : "bg-white/10 text-white/60 border border-white/20"
                                 }
               `}
                         >
-                            {STATUS_LABELS[project.status] ?? project.status}
+                            {STATUS_LABELS[project.state] ?? project.state}
                         </span>
                     </div>
 
