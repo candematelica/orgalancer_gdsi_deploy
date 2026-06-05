@@ -5,10 +5,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
-from app.models import Project, ProjectPortalToken, Task, TaskStatus
+from app.models import Project, ProjectPortalToken, Receipt, Revenue, User
 from app.routers.auth import get_current_user
-from app.models import User
-from app.schemas.portal import PortalProjectResponse, PortalTokenResponse
+from app.schemas.portal import PortalProjectResponse, PortalTokenResponse, PortalReceiptItem
 
 router = APIRouter(prefix="/portal", tags=["portal"])
 
@@ -22,7 +21,6 @@ def generate_portal_token(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    # Verificar que el proyecto pertenece al usuario
     project = db.query(Project).filter(
         Project.id == project_id,
         Project.user_id == current_user.id,
@@ -30,14 +28,12 @@ def generate_portal_token(
     if not project:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
 
-    # Si ya tiene token, devolver el existente (idempotente)
     existing = db.query(ProjectPortalToken).filter(
         ProjectPortalToken.project_id == project_id
     ).first()
     if existing:
         return PortalTokenResponse(token=existing.token)
 
-    # Generar token nuevo
     token = secrets.token_hex(24)
     portal_token = ProjectPortalToken(project_id=project_id, token=token)
 
@@ -76,26 +72,40 @@ def get_portal(
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
 
     total = len(project.tasks)
-    completed = sum(
-        1 for t in project.tasks 
-        if t.status == TaskStatus.completed or t.status == "Completada"
+    completed = sum(1 for t in project.tasks if t.status.value == "Completada")
+
+    # Recibos del proyecto
+    receipts = (
+        db.query(Receipt)
+        .filter(Receipt.project_id == portal_token.project_id)
+        .order_by(Receipt.date_emitted.desc())
+        .all()
     )
 
-    print(f"[DEBUG] Proyecto: {project.name}")
-    print(f"[DEBUG] Total tareas: {total}")
-    for t in project.tasks:
-        print(f"  - {t.title} | {t.status} | tipo: {type(t.status)}")
-    
     return PortalProjectResponse(
         name=project.name,
         description=project.description,
-        state=project.state,
+        state=project.state.value,
         progress_percentage=round((completed / total) * 100) if total > 0 else 0,
         start_date=project.start_date,
         deadline=project.deadline,
         client_name=project.client.name if project.client else None,
         tasks=[
-            {"id": str(t.id), "title": t.title, "status": t.status.value if hasattr(t.status, 'value') else t.status}
+            {
+                "id": str(t.id),
+                "title": t.title,
+                "status": t.status.value if hasattr(t.status, "value") else t.status,
+            }
             for t in project.tasks
+        ],
+        receipts=[
+            PortalReceiptItem(
+                id=r.id,
+                concept=r.concept,
+                amount=float(r.amount),
+                date_emitted=r.date_emitted,
+                status=r.status.value,
+            )
+            for r in receipts
         ],
     )

@@ -1,5 +1,3 @@
-// Página pública — sin auth. Fetch al backend Python.
-
 import { notFound } from "next/navigation";
 import PortalClient from "./_components/portal_client";
 
@@ -16,7 +14,7 @@ export default async function PortalPage({ params }: Props) {
 
   if (!res.ok) return notFound();
 
-  const data = await res.json();
+  const project = await res.json();
 
-  return <PortalClient project={data} tasks={data.tasks ?? []} freelancerName={""} />; //chusmear si esto tira error
+  return <PortalClient project={project} freelancerName={""} />;
 }
