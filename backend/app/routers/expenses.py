@@ -97,7 +97,8 @@ def create_expense(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    _validate_category(data.category_id, current_user.id, db)
+    if data.category_id:
+        _validate_category(data.category_id, current_user.id, db)
     if data.project_id:
         _validate_project(data.project_id, current_user.id, db)
 

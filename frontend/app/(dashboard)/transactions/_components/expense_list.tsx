@@ -9,11 +9,13 @@ import ConfirmDeleteExpenseDialog from "./confirm_delete_expense_dialog";
 export type GroupMode = "general" | "category" | "project" | "period";
 
 interface Props {
-  expenses:   Expense[];
-  categories: ExpenseCategory[];
-  currency:   string;
-  onDelete?:  (id: string) => void;
-  onEdit?:    (expense: Expense) => void;
+  expenses:    Expense[];
+  categories:  ExpenseCategory[];
+  currency:    string;
+  activeTab:   GroupMode;
+  onTabChange: (tab: GroupMode) => void;
+  onDelete?:   (id: string) => void;
+  onEdit?:     (expense: Expense) => void;
 }
 
 function formatDate(s: string) {
@@ -126,17 +128,15 @@ function GroupBlock({
 }
 
 // main component
-export default function ExpenseList({ expenses, categories, currency, onDelete, onEdit }: Props) {
-  const [mode, setMode] = useState<GroupMode>("general");
-
+export default function ExpenseList({ expenses, categories, currency, activeTab, onTabChange, onDelete, onEdit }: Props) {
   const isEmpty = expenses.length === 0;
 
   return (
     <div>
       <SectionTabs
         tabs={EXPENSE_TABS}
-        active={mode}
-        onChange={setMode}
+        active={activeTab}
+        onChange={onTabChange}
         activeColor="bg-red-500"
       />
 
@@ -147,7 +147,7 @@ export default function ExpenseList({ expenses, categories, currency, onDelete, 
       ) : (
         <>
           {/* General */}
-          {mode === "general" && (
+          {activeTab === "general" && (
             <>
               <h2 className="text-base font-bold text-gray-800 mb-4">Gastos Recientes</h2>
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm divide-y divide-gray-50">
@@ -159,7 +159,7 @@ export default function ExpenseList({ expenses, categories, currency, onDelete, 
           )}
 
           {/* By category */}
-          {mode === "category" && (() => {
+          {activeTab === "category" && (() => {
             const groups = categories
               .map((cat) => ({
                 cat,
@@ -196,7 +196,7 @@ export default function ExpenseList({ expenses, categories, currency, onDelete, 
           })()}
 
           {/* By project */}
-          {mode === "project" && (() => {
+          {activeTab === "project" && (() => {
             const projectMap = new Map<string, { name: string; items: Expense[] }>();
 
             expenses.forEach((e) => {
@@ -225,7 +225,7 @@ export default function ExpenseList({ expenses, categories, currency, onDelete, 
           })()}
 
           {/* By period (month) */}
-          {mode === "period" && (() => {
+          {activeTab === "period" && (() => {
             const periodMap = new Map<string, Expense[]>();
 
             expenses.forEach((e) => {
