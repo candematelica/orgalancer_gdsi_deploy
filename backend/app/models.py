@@ -1,3 +1,4 @@
+from datetime import datetime
 import uuid
 from sqlalchemy import Column, String, Float, ForeignKey, Date, Numeric, Boolean, Table, DateTime
 from sqlalchemy import Enum as SQLEnum
@@ -90,6 +91,7 @@ class Project(Base):
     client = relationship("Client", back_populates="projects")
     tasks = relationship("Task", back_populates="project", cascade="all, delete-orphan")
     time_entries = relationship("TimeEntry", back_populates="project", cascade="all, delete-orphan")
+    portal_token = relationship("ProjectPortalToken", back_populates="project", uselist=False)
 
 
 class TaskStatus(str, enum.Enum):
@@ -240,3 +242,13 @@ class Expense(Base):
     user     = relationship("User")
     category = relationship("ExpenseCategory", back_populates="expenses")
     project  = relationship("Project")
+ 
+class ProjectPortalToken(Base):
+    __tablename__ = "project_portal_tokens"
+    
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    project_id = Column(String, ForeignKey("projects.id", ondelete="CASCADE"), unique=True, nullable=False)
+    token = Column(String, unique=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    project = relationship("Project", back_populates="portal_token")
