@@ -14,6 +14,7 @@ import ExpenseStatCards                      from "./_components/expense_stats";
 import ExpenseList                           from "./_components/expense_list";
 import RegisterExpenseModal                  from "./_components/register_expense_modal";
 import RevenueLineChart                      from "./_components/RevenueLineChart";
+import ExpenseDeleteErrorDialog              from "./_components/expense_delete_error_dialog";
 
 // shared style tokens
 const FILTER_SELECT = "w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-300";
@@ -68,6 +69,7 @@ export default function RevenuePage() {
     load: loadExpenses, save: saveExpense, update: updateExpense,
     remove: removeExpense, createCategory, updateCategory, removeCategory
   } = useExpenses();
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const monetary = transactions.filter((t) => t.payment_type === "monetario").reduce((s, t) => s + t.amount, 0);
   const barter   = transactions.filter((t) => t.payment_type === "canje").reduce((s, t) => s + t.amount, 0);
@@ -187,7 +189,10 @@ export default function RevenuePage() {
               transactions={transactions}
               currency={currency}
               onEdit={handleEdit}
-              onDelete={handleDelete}
+              onDelete={async (id) => {
+                const result = await remove(id);
+                if (!result.ok) setDeleteError(result.error ?? "Error al eliminar el gasto");
+              }}
               onViewReceipt={handleViewReceipt}
             />
           )}
@@ -223,6 +228,10 @@ export default function RevenuePage() {
               categories={categories}
               currency={currency}
               onEdit={(exp) => { setEditingExpense(exp); setExpenseModalOpen(true); }}
+              onDelete={async (id) => {
+                const result = await removeExpense(id);
+                if (!result.ok) setDeleteError(result.error ?? "Error al eliminar el gasto");
+              }}
             />
           )}
 
@@ -241,6 +250,13 @@ export default function RevenuePage() {
             initialData={editingExpense ?? undefined}
             mode={editingExpense ? "edit" : "create"}
           />
+
+          {deleteError && (
+            <ExpenseDeleteErrorDialog
+              message={deleteError}
+              onClose={() => setDeleteError(null)}
+            />
+          )}
         </>
       )}
     </div>
