@@ -5,21 +5,27 @@ import RevenueHeader, { type SectionView } from "./_components/transactions_head
 import SectionTabs, { type Tab } from "./_components/section_tabs";
 import RevenueStatCards from "./_components/income_stats";
 import TransactionList, { type Transaction } from "./_components/income_list";
-import RegisterIncomeModal from "./_components/register_income_modal";
-import { useRevenue } from "./_hooks/use_revenue";
-import { useExpenses, type Expense } from "./_hooks/use_expenses";
-import ReceiptDetailModal from "./../_receipts/_components/receipt_detail_modal";
-import { type Receipt } from "./../_receipts/types";
-import ExpenseStatCards from "./_components/expense_stats";
-import ExpenseList from "./_components/expense_list";
-import RegisterExpenseModal from "./_components/register_expense_modal";
-import RevenueLineChart from "./_components/RevenueLineChart";
+import RegisterIncomeModal                   from "./_components/register_income_modal";
+import { useRevenue }                        from "./_hooks/use_revenue";
+import { useExpenses, type Expense }         from "./_hooks/use_expenses";
+import ReceiptDetailModal                    from "./../_receipts/_components/receipt_detail_modal";
+import { type Receipt }                      from "./../_receipts/types";
+import ExpenseStatCards                      from "./_components/expense_stats";
+import ExpenseList, { type GroupMode }       from "./_components/expense_list";
+import RegisterExpenseModal                  from "./_components/register_expense_modal";
+import RevenueLineChart                      from "./_components/RevenueLineChart";
+import ExpenseDeleteErrorDialog              from "./_components/expense_delete_error_dialog";
 
 // shared style tokens
 const FILTER_SELECT = "w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-300";
 const DATE_INPUT = "px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-300";
 const BTN_PRIMARY = "px-5 py-2.5 bg-green-600 text-white text-sm font-semibold rounded-xl hover:bg-green-700 transition";
 const BTN_GHOST = "px-5 py-2.5 border border-gray-200 text-gray-600 text-sm rounded-xl hover:bg-gray-50 transition";
+
+const EXP_FILTER_SELECT = "w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-red-300";
+const EXP_DATE_INPUT    = "px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-300";
+const EXP_BTN_PRIMARY   = "px-5 py-2.5 bg-red-500 text-white text-sm font-semibold rounded-xl hover:bg-red-600 transition";
+const EXP_BTN_GHOST     = "px-5 py-2.5 border border-gray-200 text-gray-600 text-sm rounded-xl hover:bg-gray-50 transition";
 
 type RevenueTab = "general" | "client" | "project" | "period";
 const INCOME_TABS: Tab<RevenueTab>[] = [
@@ -56,7 +62,13 @@ export default function RevenuePage() {
   const [toDate, setToDate] = useState("");
   const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
 
-  const clients = useOptions("/api/clients");
+  const [expTab,        setExpTab]        = useState<GroupMode>("general");
+  const [expCategoryId, setExpCategoryId] = useState("");
+  const [expProjectId,  setExpProjectId]  = useState("");
+  const [expFromDate,   setExpFromDate]   = useState("");
+  const [expToDate,     setExpToDate]     = useState("");
+
+  const clients  = useOptions("/api/clients");
   const projects = useOptions("/api/projects");
   const { transactions, loading, error, load, save, update, remove, currency } = useRevenue();
 
@@ -68,6 +80,7 @@ export default function RevenuePage() {
     load: loadExpenses, save: saveExpense, update: updateExpense,
     remove: removeExpense, createCategory, updateCategory, removeCategory
   } = useExpenses();
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const monetary = transactions.filter((t) => t.payment_type === "monetario").reduce((s, t) => s + t.amount, 0);
   const barter = transactions.filter((t) => t.payment_type === "canje").reduce((s, t) => s + t.amount, 0);
@@ -171,7 +184,7 @@ export default function RevenuePage() {
           {!loading && !error && activeTab === "general" && (
             <>
               <RevenueStatCards transactions={transactions} currency={currency} />
-              <RevenueLineChart />
+              <RevenueLineChart transactions={transactions} currency={currency} />
             </>
           )}
 
@@ -187,7 +200,10 @@ export default function RevenuePage() {
               transactions={transactions}
               currency={currency}
               onEdit={handleEdit}
-              onDelete={handleDelete}
+              onDelete={async (id) => {
+                const result = await remove(id);
+                if (!result.ok) setDeleteError(result.error ?? "Error al eliminar el gasto");
+              }}
               onViewReceipt={handleViewReceipt}
             />
           )}
@@ -222,10 +238,61 @@ export default function RevenuePage() {
       {/* expenses view */}
       {activeView === "expenses" && (
         <>
+          {expTab === "category" && (
+            <div className="flex items-end gap-3 mb-5">
+              <div className="flex-1 max-w-xs">
+                <label className="block text-xs font-medium text-gray-500 mb-1">Categoría</label>
+                <select
+                  value={expCategoryId}
+                  onChange={(e) => setExpCategoryId(e.target.value)}
+                  className={EXP_FILTER_SELECT}
+                >
+                  <option value="">Todas las categorías</option>
+                  {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+              <button onClick={() => loadExpenses({ category_id: expCategoryId || undefined })} className={EXP_BTN_PRIMARY}>Filtrar</button>
+              <button onClick={() => { setExpCategoryId(""); loadExpenses(); }}                  className={EXP_BTN_GHOST}>Limpiar</button>
+            </div>
+          )}
+
+          {expTab === "project" && (
+            <div className="flex items-end gap-3 mb-5">
+              <div className="flex-1 max-w-xs">
+                <label className="block text-xs font-medium text-gray-500 mb-1">Proyecto</label>
+                <select
+                  value={expProjectId}
+                  onChange={(e) => setExpProjectId(e.target.value)}
+                  className={EXP_FILTER_SELECT}
+                >
+                  <option value="">Todos los proyectos</option>
+                  {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </div>
+              <button onClick={() => loadExpenses({ project_id: expProjectId || undefined })} className={EXP_BTN_PRIMARY}>Filtrar</button>
+              <button onClick={() => { setExpProjectId(""); loadExpenses(); }}                 className={EXP_BTN_GHOST}>Limpiar</button>
+            </div>
+          )}
+
+          {expTab === "period" && (
+            <div className="flex items-end gap-3 mb-5">
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Desde</label>
+                <input type="date" value={expFromDate} onChange={(e) => setExpFromDate(e.target.value)} className={EXP_DATE_INPUT} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Hasta</label>
+                <input type="date" value={expToDate} onChange={(e) => setExpToDate(e.target.value)} className={EXP_DATE_INPUT} />
+              </div>
+              <button onClick={() => loadExpenses({ from: expFromDate || undefined, to: expToDate || undefined })} className={EXP_BTN_PRIMARY}>Filtrar</button>
+              <button onClick={() => { setExpFromDate(""); setExpToDate(""); loadExpenses(); }}                     className={EXP_BTN_GHOST}>Limpiar</button>
+            </div>
+          )}
+
           {expLoading && <p className="text-sm text-gray-400 mt-4">Cargando...</p>}
           {expError && <p className="text-sm text-red-500  mt-4">{expError}</p>}
 
-          {!expLoading && !expError && (
+          {!expLoading && !expError && expTab === "general" && (
             <ExpenseStatCards expenses={expenses} categories={categories} currency={currency} />
           )}
 
@@ -234,7 +301,13 @@ export default function RevenuePage() {
               expenses={expenses}
               categories={categories}
               currency={currency}
+              activeTab={expTab}
+              onTabChange={(tab) => { setExpTab(tab); if (tab === "general") loadExpenses(); }}
               onEdit={(exp) => { setEditingExpense(exp); setExpenseModalOpen(true); }}
+              onDelete={async (id) => {
+                const result = await removeExpense(id);
+                if (!result.ok) setDeleteError(result.error ?? "Error al eliminar el gasto");
+              }}
             />
           )}
 
@@ -253,8 +326,16 @@ export default function RevenuePage() {
             initialData={editingExpense ?? undefined}
             mode={editingExpense ? "edit" : "create"}
           />
+
+          {deleteError && (
+            <ExpenseDeleteErrorDialog
+              message={deleteError}
+              onClose={() => setDeleteError(null)}
+            />
+          )}
         </>
       )}
+
     </div>
   );
 }

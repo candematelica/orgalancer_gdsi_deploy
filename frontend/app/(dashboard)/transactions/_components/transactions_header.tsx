@@ -14,7 +14,7 @@ interface Props {
 export default function RevenueHeader({ activeView, onViewChange, onRegister }: Props) {
   return (
     <SectionHeader
-      title="Ingresos & Gastos"
+      title="Ingresos y Gastos"
       subtitle="Registra y visualiza tus movimientos financieros"
       icon={<Wallet className="w-8 h-8 text-indigo-600" />}
     >
