@@ -25,7 +25,7 @@ interface Project {
     name: string;
     description?: string;
     status: string;
-    progress: number;
+    progress_percentage: number;
     start_date?: string;
     deadline?: string;
     estimated_budget?: number;
@@ -168,13 +168,13 @@ export default function PortalClient({ project, tasks, freelancerName }: Props) 
                     <div className="mb-5">
                         <div className="flex justify-between items-center mb-2">
                             <span className="text-white/60 text-sm">Progreso general</span>
-                            <span className="text-white font-semibold">{project.progress ?? 0}%</span>
+                            <span className="text-white font-semibold">{project.progress_percentage ?? 0}%</span>
                         </div>
                         <div className="w-full h-2.5 rounded-full bg-white/10">
                             <div
                                 className="h-full rounded-full transition-all duration-700"
                                 style={{
-                                    width: `${project.progress ?? 0}%`,
+                                    width: `${project.progress_percentage ?? 0}%`,
                                     background: "linear-gradient(90deg, #a855f7, #6366f1)",
                                 }}
                             />
