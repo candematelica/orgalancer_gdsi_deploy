@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Trash2, Pencil } from "lucide-react";
 import { type Expense, type ExpenseCategory } from "../_hooks/use_expenses";
 import SectionTabs, { type Tab } from "./section_tabs";
+import ConfirmDeleteExpenseDialog from "./confirm_delete_expense_dialog";
 
 export type GroupMode = "general" | "category" | "project" | "period";
 
@@ -34,8 +35,8 @@ const EXPENSE_TABS: Tab<GroupMode>[] = [
 
 const FALLBACK_COLOR = "#8B5CF6";
 
-// ── Row ──────────────────────────────────────────────────────────────────────
 function ExpenseRow({ expense, currency, onDelete, onEdit }: { expense: Expense; currency?: string; onDelete?: (id: string) => void; onEdit?: (e: Expense) => void }) {
+  const [confirming, setConfirming] = useState(false);
   const color = expense.category_color ?? FALLBACK_COLOR;
   const rowCurrency = currency ?? expense.currency;
   return (
@@ -76,12 +77,21 @@ function ExpenseRow({ expense, currency, onDelete, onEdit }: { expense: Expense;
           </button>
         )}
         <button
-          disabled
-          className="p-1.5 text-gray-300 cursor-not-allowed rounded-lg"
-          title="Eliminar (próximamente)"
+          onClick={() => setConfirming(true)}
+          className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition"
+          title="Eliminar gasto"
         >
           <Trash2 size={14} />
         </button>
+
+        {confirming && (
+          <ConfirmDeleteExpenseDialog
+            expense={expense}
+            currency={currency ?? expense.currency}
+            onConfirm={() => { setConfirming(false); onDelete?.(expense.id); }}
+            onCancel={() => setConfirming(false)}
+          />
+        )}
       </div>
     </div>
   );
