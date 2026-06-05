@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
-from app.models import Project, ProjectPortalToken, Task
+from app.models import Project, ProjectPortalToken, Task, TaskStatus
 from app.routers.auth import get_current_user
 from app.models import User
 from app.schemas.portal import PortalProjectResponse, PortalTokenResponse
@@ -76,8 +76,16 @@ def get_portal(
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
 
     total = len(project.tasks)
-    completed = sum(1 for t in project.tasks if t.status == "Completada")
+    completed = sum(
+        1 for t in project.tasks 
+        if t.status == TaskStatus.completed or t.status == "Completada"
+    )
 
+    print(f"[DEBUG] Proyecto: {project.name}")
+    print(f"[DEBUG] Total tareas: {total}")
+    for t in project.tasks:
+        print(f"  - {t.title} | {t.status} | tipo: {type(t.status)}")
+    
     return PortalProjectResponse(
         name=project.name,
         description=project.description,
@@ -87,7 +95,7 @@ def get_portal(
         deadline=project.deadline,
         client_name=project.client.name if project.client else None,
         tasks=[
-            {"id": str(t.id), "title": t.title, "status": t.status}
+            {"id": str(t.id), "title": t.title, "status": t.status.value if hasattr(t.status, 'value') else t.status}
             for t in project.tasks
         ],
     )
