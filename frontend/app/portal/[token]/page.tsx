@@ -16,7 +16,7 @@ export default async function PortalPage({ params }: Props) {
 
   if (!res.ok) return notFound();
 
-  const project = await res.json();
+  const data = await res.json();
 
-  return <PortalClient project={project} tasks={[]} freelancerName={""} />; //chusmear si esto tira error
+  return <PortalClient project={data} tasks={data.tasks ?? []} freelancerName={""} />; //chusmear si esto tira error
 }
