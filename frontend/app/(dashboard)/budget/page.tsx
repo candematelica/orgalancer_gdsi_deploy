@@ -165,6 +165,10 @@ export default function BudgetPage() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
+  const [savedBudgets, setSavedBudgets] = useState<{
+    id: string; name: string; total_amount: number; currency: string;
+    client_name: string | null; project_name: string | null; created_at: string;
+  }[]>([]);
 
   useEffect(() => {
     const userRaw = localStorage.getItem("user");
@@ -182,11 +186,19 @@ export default function BudgetPage() {
       .catch(() => {});
   }, []);
 
+  function loadSavedBudgets() {
+    fetch("/api/budgets", { cache: "no-store" })
+      .then((r) => r.ok ? r.json() : [])
+      .then((data: any[]) => setSavedBudgets(data))
+      .catch(() => {});
+  }
+
   useEffect(() => {
     fetch("/api/clients", { cache: "no-store" })
       .then((r) => r.ok ? r.json() : [])
       .then((data: any[]) => setClients(data.map((c) => ({ id: c.id, name: c.name }))))
       .catch(() => {});
+    loadSavedBudgets();
   }, []);
 
   async function handleSave(e: React.FormEvent) {
@@ -252,6 +264,7 @@ export default function BudgetPage() {
 
       setSaveSuccess(true);
       setSaveForm({ name: "", total_amount: "", clientMode: "existing", client_id: "", newClientName: "", newClientEmail: "", newClientType: "empresa" });
+      loadSavedBudgets();
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Error al guardar");
     } finally {
@@ -385,6 +398,37 @@ export default function BudgetPage() {
 
   return (
     <div className="max-w-3xl mx-auto">
+
+      {/* Presupuestos guardados */}
+      {savedBudgets.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-base font-bold text-gray-800 mb-3">Presupuestos formales</h2>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm divide-y divide-gray-50">
+            {savedBudgets.map((b) => (
+              <div key={b.id} className="flex items-center gap-4 px-5 py-4">
+                <div className="w-9 h-9 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <FileText size={15} className="text-green-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-800 truncate">{b.name}</p>
+                  <p className="text-xs text-gray-400">
+                    {[b.client_name, b.project_name].filter(Boolean).join(" · ") || "Sin cliente ni proyecto"}
+                  </p>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <p className="text-sm font-bold text-green-600">
+                    {CURRENCY_SYMBOL[b.currency] ?? b.currency}{b.total_amount.toLocaleString("es-ES")}
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    {new Date(b.created_at).toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" })}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Generador de Presupuestos</h1>
