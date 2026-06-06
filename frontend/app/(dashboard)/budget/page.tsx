@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Send, FileText, Loader2, Pencil, Eye, Save } from "lucide-react";
+import { Send, FileText, Loader2, Pencil, Eye, Save, Mail } from "lucide-react";
 
 interface UserFinancial {
   hourly_rate: number;
@@ -165,6 +165,9 @@ export default function BudgetPage() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
+  const [sendingId, setSendingId] = useState<string | null>(null);
+  const [sentIds, setSentIds] = useState<Set<string>>(new Set());
+
   const [savedBudgets, setSavedBudgets] = useState<{
     id: string; name: string; total_amount: number; currency: string;
     client_name: string | null; project_name: string | null; created_at: string;
@@ -185,6 +188,16 @@ export default function BudgetPage() {
       })
       .catch(() => {});
   }, []);
+
+  async function handleSend(id: string) {
+    setSendingId(id);
+    try {
+      const res = await fetch(`/api/budgets/${id}/send`, { method: "POST" });
+      if (res.ok) setSentIds((prev) => new Set([...prev, id]));
+    } finally {
+      setSendingId(null);
+    }
+  }
 
   function loadSavedBudgets() {
     fetch("/api/budgets", { cache: "no-store" })
@@ -275,10 +288,21 @@ export default function BudgetPage() {
   // Auto-fill monto cuando termina el streaming
   useEffect(() => {
     if (!streaming && result) {
-      const match = result.match(/\*\*Total[:\s]+[^\d]*(\d[\d.,]*)/i);
-      if (match) {
-        const amount = match[1].replace(/\./g, "").replace(",", ".");
-        setSaveForm((p) => ({ ...p, total_amount: amount }));
+      const patterns = [
+        /\*\*Total[:\s]+[^\d]*(\d[\d.,\s]*)/i,
+        /Total[:\s]+[^\d]*(\d[\d.,\s]*)/i,
+      ];
+      for (const pattern of patterns) {
+        const match = result.match(pattern);
+        if (match) {
+          const raw = match[1].trim();
+          const withoutDecimals = raw.replace(/[.,]\d{1,2}$/, "");
+          const digits = withoutDecimals.replace(/[^\d]/g, "");
+          if (digits && parseInt(digits) > 0) {
+            setSaveForm((p) => ({ ...p, total_amount: digits }));
+            break;
+          }
+        }
       }
     }
   }, [streaming, result]);
@@ -423,6 +447,23 @@ export default function BudgetPage() {
                     {new Date(b.created_at).toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" })}
                   </p>
                 </div>
+                <button
+                  onClick={() => handleSend(b.id)}
+                  disabled={sendingId === b.id || sentIds.has(b.id)}
+                  title={sentIds.has(b.id) ? "Enviado" : b.client_name ? `Enviar a ${b.client_name}` : "Sin cliente asignado"}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition flex-shrink-0 ${
+                    sentIds.has(b.id)
+                      ? "bg-green-50 text-green-600 cursor-default"
+                      : b.client_name
+                      ? "bg-indigo-50 text-indigo-600 hover:bg-indigo-100"
+                      : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                  }`}
+                >
+                  {sendingId === b.id
+                    ? <Loader2 size={12} className="animate-spin" />
+                    : <Mail size={12} />}
+                  {sentIds.has(b.id) ? "Enviado" : "Enviar"}
+                </button>
               </div>
             ))}
           </div>

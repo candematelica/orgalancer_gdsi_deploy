@@ -181,10 +181,21 @@ export default function BudgetModal({ open, onClose, onProjectCreated }: Props) 
   // Auto-fill monto al terminar de generar
   useEffect(() => {
     if (!streaming && result) {
-      const match = result.match(/\*\*Total[:\s]+[^\d]*(\d[\d.,\s]*)/i);
-      if (match) {
-        const digits = match[1].replace(/[^\d]/g, "");
-        if (digits) setProjectForm((p) => ({ ...p, estimated_budget: digits }));
+      const patterns = [
+        /\*\*Total[:\s]+[^\d]*(\d[\d.,\s]*)/i,
+        /Total[:\s]+[^\d]*(\d[\d.,\s]*)/i,
+      ];
+      for (const pattern of patterns) {
+        const match = result.match(pattern);
+        if (match) {
+          const raw = match[1].trim();
+          const withoutDecimals = raw.replace(/[.,]\d{1,2}$/, "");
+          const digits = withoutDecimals.replace(/[^\d]/g, "");
+          if (digits && parseInt(digits) > 0) {
+            setProjectForm((p) => ({ ...p, estimated_budget: digits }));
+            break;
+          }
+        }
       }
     }
   }, [streaming, result]);

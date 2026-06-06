@@ -3,6 +3,7 @@ import asyncio
 import uuid
 from datetime import datetime
 import anthropic
+import resend
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
@@ -131,6 +132,57 @@ def list_budgets(
         )
         for b in budgets
     ]
+
+
+@router.post("/{budget_id}/send")
+def send_budget(
+    budget_id: str,
+    db: Session = Depends(get_db),
+    user = Depends(get_current_user),
+):
+    budget = db.query(Budget).filter(Budget.id == budget_id, Budget.user_id == user.id).first()
+    if not budget:
+        raise HTTPException(status_code=404, detail="Presupuesto no encontrado")
+    if not budget.client or not budget.client.email:
+        raise HTTPException(status_code=400, detail="El presupuesto no tiene un cliente con email asignado")
+
+    api_key = os.getenv("RESEND_API_KEY")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="RESEND_API_KEY no configurada")
+
+    resend.api_key = api_key
+
+    currency_symbols = {"USD": "$", "EUR": "€", "ARS": "$", "GBP": "£"}
+    symbol = currency_symbols.get(budget.currency, budget.currency)
+    amount = f"{symbol}{float(budget.total_amount):,.2f}"
+
+    html = f"""
+    <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px;color:#1f2937">
+      <h1 style="font-size:22px;font-weight:700;color:#111827;margin-bottom:4px">{budget.name}</h1>
+      <p style="color:#6b7280;font-size:14px;margin-bottom:24px">Presupuesto de {user.full_name}</p>
+      <hr style="border:none;border-top:1px solid #e5e7eb;margin-bottom:24px"/>
+      {"<p style='font-size:14px;color:#374151;margin-bottom:24px'><strong>Descripción:</strong> " + budget.description + "</p>" if budget.description else ""}
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:20px;margin-bottom:24px;text-align:center">
+        <p style="font-size:13px;color:#166534;margin:0 0 4px">Monto total</p>
+        <p style="font-size:28px;font-weight:700;color:#15803d;margin:0">{amount}</p>
+      </div>
+      <p style="font-size:13px;color:#9ca3af;text-align:center">
+        Este presupuesto fue generado con Orgalancer.
+      </p>
+    </div>
+    """
+
+    try:
+        resend.Emails.send({
+            "from": "Orgalancer <noreply@mail.orgalancer.app>",
+            "to": [budget.client.email],
+            "subject": f"Presupuesto: {budget.name}",
+            "html": html,
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al enviar email: {str(e)}")
+
+    return {"message": "Presupuesto enviado correctamente", "to": budget.client.email}
 
 
 @router.post("/generate")
