@@ -85,7 +85,11 @@ export default function ProjectsPage() {
 
   return (
     <>
-      <BudgetModal open={budgetModalOpen} onClose={() => setBudgetModalOpen(false)} />
+      <BudgetModal
+        open={budgetModalOpen}
+        onClose={() => setBudgetModalOpen(false)}
+        onProjectCreated={() => { actions.reload(); actions.reloadStats(); }}
+      />
       <EditProjectPanel
         project={editingProject}
         onClose={() => setEditingProject(null)}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { X, Send, FileText, Loader2, Sparkles } from "lucide-react";
+import { X, Send, FileText, Loader2, Sparkles, FolderPlus } from "lucide-react";
 
 interface UserFinancial {
   hourly_rate: number;
@@ -131,9 +131,10 @@ function MarkdownResult({ text, streaming }: { text: string; streaming: boolean 
 interface Props {
   open: boolean;
   onClose: () => void;
+  onProjectCreated?: () => void;
 }
 
-export default function BudgetModal({ open, onClose }: Props) {
+export default function BudgetModal({ open, onClose, onProjectCreated }: Props) {
   const [description, setDescription] = useState("");
   const [result, setResult] = useState("");
   const [streaming, setStreaming] = useState(false);
@@ -142,6 +143,18 @@ export default function BudgetModal({ open, onClose }: Props) {
   const [currency, setCurrency] = useState("USD");
   const [profession, setProfession] = useState("Freelancer");
   const resultRef = useRef<HTMLDivElement>(null);
+
+  const [showProjectForm, setShowProjectForm] = useState(false);
+  const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
+  const [projectForm, setProjectForm] = useState({
+    name: "", estimated_budget: "",
+    clientMode: "existing" as "existing" | "new",
+    client_id: "",
+    newClientName: "", newClientEmail: "", newClientType: "empresa",
+  });
+  const [projectSaving, setProjectSaving] = useState(false);
+  const [projectError, setProjectError] = useState<string | null>(null);
+  const [projectSuccess, setProjectSuccess] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -158,7 +171,23 @@ export default function BudgetModal({ open, onClose }: Props) {
         if (data?.coin_type) setCurrency(data.coin_type);
       })
       .catch(() => {});
+
+    fetch("/api/clients", { cache: "no-store" })
+      .then((r) => r.ok ? r.json() : [])
+      .then((data: any[]) => setClients(data.map((c: any) => ({ id: c.id, name: c.name }))))
+      .catch(() => {});
   }, [open]);
+
+  // Auto-fill monto al terminar de generar
+  useEffect(() => {
+    if (!streaming && result) {
+      const match = result.match(/\*\*Total[:\s]+[^\d]*(\d[\d.,\s]*)/i);
+      if (match) {
+        const digits = match[1].replace(/[^\d]/g, "");
+        if (digits) setProjectForm((p) => ({ ...p, estimated_budget: digits }));
+      }
+    }
+  }, [streaming, result]);
 
   useEffect(() => {
     if (resultRef.current) {
@@ -227,6 +256,55 @@ export default function BudgetModal({ open, onClose }: Props) {
       setError(err instanceof Error ? err.message : "Error desconocido");
     } finally {
       setStreaming(false);
+    }
+  }
+
+  async function handleCreateProject(e: React.FormEvent) {
+    e.preventDefault();
+    if (!projectForm.name.trim() || !projectForm.estimated_budget) {
+      setProjectError("Nombre y presupuesto son obligatorios.");
+      return;
+    }
+    if (projectForm.clientMode === "new" && (!projectForm.newClientName.trim() || !projectForm.newClientEmail.trim())) {
+      setProjectError("Nombre y email del cliente son obligatorios.");
+      return;
+    }
+    setProjectSaving(true);
+    setProjectError(null);
+    try {
+      let clientId = projectForm.client_id || null;
+      if (projectForm.clientMode === "new") {
+        const cRes = await fetch("/api/clients", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: projectForm.newClientName.trim(),
+            email: projectForm.newClientEmail.trim(),
+            client_type: projectForm.newClientType,
+          }),
+        });
+        if (!cRes.ok) throw new Error("Error al crear el cliente");
+        clientId = (await cRes.json()).id;
+      }
+
+      const pRes = await fetch("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: projectForm.name.trim(),
+          estimated_budget: parseFloat(projectForm.estimated_budget),
+          contract_type: "fixed_price",
+          client_id: clientId,
+        }),
+      });
+      if (!pRes.ok) throw new Error("Error al crear el proyecto");
+
+      setProjectSuccess(true);
+      onProjectCreated?.();
+    } catch (err) {
+      setProjectError(err instanceof Error ? err.message : "Error al guardar");
+    } finally {
+      setProjectSaving(false);
     }
   }
 
@@ -312,6 +390,75 @@ export default function BudgetModal({ open, onClose }: Props) {
           )}
         </div>
 
+        {/* Project creation form */}
+        {showProjectForm && result && !streaming && (
+          <form id="budget-project-form" onSubmit={handleCreateProject} className="px-6 py-4 border-t border-gray-100 space-y-3 flex-shrink-0 bg-gray-50">
+            <p className="text-xs font-semibold text-gray-700">Crear proyecto desde este presupuesto</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Nombre del proyecto *</label>
+                <input
+                  type="text"
+                  value={projectForm.name}
+                  onChange={(e) => setProjectForm((p) => ({ ...p, name: e.target.value }))}
+                  placeholder="ej: Sitio web"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Presupuesto ({currencySymbol}) *</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={projectForm.estimated_budget}
+                  onChange={(e) => setProjectForm((p) => ({ ...p, estimated_budget: e.target.value }))}
+                  placeholder="ej: 1500"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2 mb-2">
+              {(["existing", "new"] as const).map((mode) => (
+                <button key={mode} type="button"
+                  onClick={() => setProjectForm((p) => ({ ...p, clientMode: mode }))}
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition ${
+                    projectForm.clientMode === mode ? "bg-indigo-600 text-white" : "bg-gray-200 text-gray-500 hover:bg-gray-300"
+                  }`}
+                >
+                  {mode === "existing" ? "Cliente existente" : "Nuevo cliente"}
+                </button>
+              ))}
+            </div>
+            {projectForm.clientMode === "existing" ? (
+              <select
+                value={projectForm.client_id}
+                onChange={(e) => setProjectForm((p) => ({ ...p, client_id: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              >
+                <option value="">Sin cliente</option>
+                {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            ) : (
+              <div className="grid grid-cols-3 gap-2">
+                <input type="text" placeholder="Nombre *" value={projectForm.newClientName}
+                  onChange={(e) => setProjectForm((p) => ({ ...p, newClientName: e.target.value }))}
+                  className="px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white" />
+                <input type="email" placeholder="Email *" value={projectForm.newClientEmail}
+                  onChange={(e) => setProjectForm((p) => ({ ...p, newClientEmail: e.target.value }))}
+                  className="px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white" />
+                <select value={projectForm.newClientType}
+                  onChange={(e) => setProjectForm((p) => ({ ...p, newClientType: e.target.value }))}
+                  className="px-3 py-2 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                  <option value="empresa">Empresa</option>
+                  <option value="persona">Persona</option>
+                </select>
+              </div>
+            )}
+            {projectError && <p className="text-xs text-red-500">{projectError}</p>}
+            {projectSuccess && <p className="text-xs text-green-600 font-medium">✓ Proyecto creado correctamente.</p>}
+          </form>
+        )}
+
         {/* Footer */}
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 flex-shrink-0">
           <button
@@ -321,14 +468,17 @@ export default function BudgetModal({ open, onClose }: Props) {
           >
             Cerrar
           </button>
-          {/* Placeholder para futura acción de crear proyecto desde presupuesto */}
-          {result && !streaming && (
+          {result && !streaming && !projectSuccess && (
             <button
-              disabled
-              title="Próximamente"
-              className="px-5 py-2.5 bg-gray-100 text-gray-400 text-sm font-semibold rounded-xl cursor-not-allowed"
+              onClick={() => showProjectForm
+                ? (document.getElementById("budget-project-form") as HTMLFormElement)?.requestSubmit()
+                : setShowProjectForm(true)
+              }
+              disabled={projectSaving}
+              className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm font-semibold rounded-xl hover:shadow-md disabled:opacity-50 transition"
             >
-              Crear proyecto desde presupuesto
+              {projectSaving ? <Loader2 size={14} className="animate-spin" /> : <FolderPlus size={14} />}
+              {projectSaving ? "Creando..." : "Crear proyecto desde presupuesto"}
             </button>
           )}
         </div>
