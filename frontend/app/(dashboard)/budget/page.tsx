@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Send, FileText, Loader2, Pencil, Eye } from "lucide-react";
+import { Send, FileText, Loader2, Pencil, Eye, Save } from "lucide-react";
 
 interface UserFinancial {
   hourly_rate: number;
@@ -155,6 +155,17 @@ export default function BudgetPage() {
   const editRef = useRef<HTMLDivElement>(null);
   const [editingHtml, setEditingHtml] = useState("");
 
+  const [saveForm, setSaveForm] = useState({
+    name: "", total_amount: "",
+    clientMode: "existing" as "existing" | "new",
+    client_id: "",
+    newClientName: "", newClientEmail: "", newClientType: "empresa",
+  });
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
+
   useEffect(() => {
     const userRaw = localStorage.getItem("user");
     if (!userRaw) return;
@@ -170,6 +181,94 @@ export default function BudgetPage() {
       })
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    fetch("/api/clients", { cache: "no-store" })
+      .then((r) => r.ok ? r.json() : [])
+      .then((data: any[]) => setClients(data.map((c) => ({ id: c.id, name: c.name }))))
+      .catch(() => {});
+  }, []);
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    const totalAmount = parseFloat(saveForm.total_amount);
+    if (!saveForm.name.trim() || !totalAmount) {
+      setSaveError("Nombre y monto son obligatorios.");
+      return;
+    }
+    if (saveForm.clientMode === "new" && (!saveForm.newClientName.trim() || !saveForm.newClientEmail.trim())) {
+      setSaveError("Nombre y email del cliente son obligatorios.");
+      return;
+    }
+    setSaving(true);
+    setSaveError(null);
+    try {
+      // 1. Crear cliente nuevo si corresponde
+      let clientId = saveForm.client_id || null;
+      if (saveForm.clientMode === "new") {
+        const cRes = await fetch("/api/clients", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name:        saveForm.newClientName.trim(),
+            email:       saveForm.newClientEmail.trim(),
+            client_type: saveForm.newClientType,
+          }),
+        });
+        if (!cRes.ok) throw new Error("Error al crear el cliente");
+        const cData = await cRes.json();
+        clientId = cData.id;
+      }
+
+      // 2. Crear proyecto a partir del presupuesto
+      const pRes = await fetch("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name:             saveForm.name.trim(),
+          estimated_budget: totalAmount,
+          contract_type:    "fixed_price",
+          client_id:        clientId,
+          description:      description.trim() || null,
+        }),
+      });
+      if (!pRes.ok) throw new Error("Error al crear el proyecto");
+      const pData = await pRes.json();
+
+      // 3. Guardar presupuesto formal
+      const bRes = await fetch("/api/budgets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name:         saveForm.name.trim(),
+          total_amount: totalAmount,
+          currency,
+          description:  description.trim() || null,
+          client_id:    clientId,
+          project_id:   pData.id,
+        }),
+      });
+      if (!bRes.ok) throw new Error((await bRes.json()).error);
+
+      setSaveSuccess(true);
+      setSaveForm({ name: "", total_amount: "", clientMode: "existing", client_id: "", newClientName: "", newClientEmail: "", newClientType: "empresa" });
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Error al guardar");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // Auto-fill monto cuando termina el streaming
+  useEffect(() => {
+    if (!streaming && result) {
+      const match = result.match(/\*\*Total[:\s]+[^\d]*(\d[\d.,]*)/i);
+      if (match) {
+        const amount = match[1].replace(/\./g, "").replace(",", ".");
+        setSaveForm((p) => ({ ...p, total_amount: amount }));
+      }
+    }
+  }, [streaming, result]);
 
   useEffect(() => {
     if (resultRef.current) {
@@ -389,6 +488,123 @@ export default function BudgetPage() {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Save form */}
+      {result && !streaming && (
+        <div className="mt-4 bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+          <h3 className="text-sm font-semibold text-gray-800 mb-4">Guardar como presupuesto formal</h3>
+          <form onSubmit={handleSave} className="space-y-4">
+
+            {/* Nombre + Monto */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Nombre del presupuesto *</label>
+                <input
+                  type="text"
+                  value={saveForm.name}
+                  onChange={(e) => setSaveForm((p) => ({ ...p, name: e.target.value }))}
+                  placeholder="ej: Sitio web para cliente X"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-300"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Monto total ({currencySymbol}) *</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={saveForm.total_amount}
+                  onChange={(e) => setSaveForm((p) => ({ ...p, total_amount: e.target.value }))}
+                  placeholder="ej: 1500"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-300"
+                />
+              </div>
+            </div>
+
+            {/* Toggle cliente */}
+            <div>
+              <div className="flex gap-2 mb-3">
+                {(["existing", "new"] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setSaveForm((p) => ({ ...p, clientMode: mode }))}
+                    className={`px-4 py-1.5 rounded-xl text-xs font-semibold transition ${
+                      saveForm.clientMode === mode
+                        ? "bg-green-600 text-white"
+                        : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                    }`}
+                  >
+                    {mode === "existing" ? "Cliente existente" : "Nuevo cliente"}
+                  </button>
+                ))}
+              </div>
+
+              {saveForm.clientMode === "existing" ? (
+                <select
+                  value={saveForm.client_id}
+                  onChange={(e) => setSaveForm((p) => ({ ...p, client_id: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-300"
+                >
+                  <option value="">Sin cliente</option>
+                  {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              ) : (
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Nombre *</label>
+                    <input
+                      type="text"
+                      value={saveForm.newClientName}
+                      onChange={(e) => setSaveForm((p) => ({ ...p, newClientName: e.target.value }))}
+                      placeholder="Nombre del cliente"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-300"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Email *</label>
+                    <input
+                      type="email"
+                      value={saveForm.newClientEmail}
+                      onChange={(e) => setSaveForm((p) => ({ ...p, newClientEmail: e.target.value }))}
+                      placeholder="email@cliente.com"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-300"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Tipo</label>
+                    <select
+                      value={saveForm.newClientType}
+                      onChange={(e) => setSaveForm((p) => ({ ...p, newClientType: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-300"
+                    >
+                      <option value="empresa">Empresa</option>
+                      <option value="persona">Persona</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <p className="text-xs text-gray-400">
+              Se creará automáticamente un proyecto con el nombre y monto del presupuesto.
+            </p>
+
+            {saveError && <p className="text-xs text-red-500">{saveError}</p>}
+            {saveSuccess && <p className="text-xs text-green-600 font-medium">✓ Presupuesto, cliente y proyecto guardados correctamente.</p>}
+
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                disabled={saving}
+                className="flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white text-sm font-semibold rounded-xl hover:bg-green-700 disabled:opacity-50 transition"
+              >
+                {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                {saving ? "Guardando..." : "Guardar presupuesto formal"}
+              </button>
+            </div>
+          </form>
         </div>
       )}
     </div>
