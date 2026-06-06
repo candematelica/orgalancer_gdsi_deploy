@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Send, FileText, Loader2 } from "lucide-react";
+import { Send, FileText, Loader2, Pencil, Eye } from "lucide-react";
 
 interface UserFinancial {
   hourly_rate: number;
@@ -144,12 +144,16 @@ function MarkdownResult({ text, streaming }: { text: string; streaming: boolean 
 export default function BudgetPage() {
   const [description, setDescription] = useState("");
   const [result, setResult] = useState("");
+  const [editing, setEditing] = useState(false);
   const [streaming, setStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hourlyRate, setHourlyRate] = useState<number | null>(null);
   const [currency, setCurrency] = useState("USD");
   const [profession, setProfession] = useState("Freelancer");
   const resultRef = useRef<HTMLDivElement>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
+  const editRef = useRef<HTMLDivElement>(null);
+  const [editingHtml, setEditingHtml] = useState("");
 
   useEffect(() => {
     const userRaw = localStorage.getItem("user");
@@ -231,6 +235,55 @@ export default function BudgetPage() {
 
   const currencySymbol = CURRENCY_SYMBOL[currency] ?? currency;
 
+  function recalculate(container: HTMLDivElement) {
+    const table = container.querySelector("table");
+    if (!table) return;
+
+    const rows = Array.from(table.querySelectorAll("tbody tr"));
+    let totalHours = 0;
+
+    rows.forEach((row) => {
+      const cells = row.querySelectorAll("td");
+      if (cells.length < 2) return;
+      if ((cells[0].textContent ?? "").toLowerCase().includes("total")) return;
+      const match = (cells[1].textContent ?? "").match(/(\d+(?:[.,]\d+)?)/);
+      if (match) totalHours += parseFloat(match[1].replace(",", "."));
+    });
+
+    // Actualizar fila total en tabla
+    rows.forEach((row) => {
+      const cells = row.querySelectorAll("td");
+      if (cells.length < 2) return;
+      if ((cells[0].textContent ?? "").toLowerCase().includes("total")) {
+        cells[1].innerHTML = `<strong>${totalHours} horas</strong>`;
+      }
+    });
+
+    // Leer tarifa horaria desde el contenido editable si fue modificada
+    let effectiveRate = hourlyRate ?? 0;
+    container.querySelectorAll("p, span, li, div").forEach((el) => {
+      if (el.children.length === 0 && (el.textContent ?? "").includes("Tarifa horaria:")) {
+        const match = (el.textContent ?? "").match(/(\d+(?:[.,]\d+)?)/);
+        if (match) effectiveRate = parseFloat(match[1].replace(",", "."));
+      }
+    });
+
+    // Actualizar monto total
+    const totalAmount = Math.round(totalHours * effectiveRate);
+    container.querySelectorAll("strong, b").forEach((el) => {
+      if ((el.textContent ?? "").includes("Total:")) {
+        el.textContent = `Total: ${currencySymbol}${totalAmount.toLocaleString("es-ES")}`;
+      }
+    });
+
+    // Actualizar línea de horas totales estimadas
+    container.querySelectorAll("p, span, li").forEach((el) => {
+      if (el.children.length === 0 && (el.textContent ?? "").includes("Horas totales estimadas:")) {
+        el.textContent = `Horas totales estimadas: ${totalHours} horas`;
+      }
+    });
+  }
+
   return (
     <div className="max-w-3xl mx-auto">
       {/* Header */}
@@ -286,10 +339,55 @@ export default function BudgetPage() {
           <div className="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100 bg-gray-50">
             <FileText size={15} className="text-green-600" />
             <span className="text-sm font-semibold text-gray-800">Presupuesto generado</span>
-            {streaming && <Loader2 size={12} className="animate-spin text-gray-400 ml-auto" />}
+            {streaming  ? <Loader2 size={12} className="animate-spin text-gray-400 ml-auto" />
+              : (
+                <button
+                  onClick={() => {
+                    if (!editing) {
+                      setEditingHtml(previewRef.current?.innerHTML ?? "");
+                    } else {
+                      setEditingHtml(editRef.current?.innerHTML ?? editingHtml);
+                    }
+                    setEditing((v) => !v);
+                  }}
+                  className="ml-auto flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100 transition"
+                >
+                  {editing ? <><Eye size={13} /> Vista previa</> : <><Pencil size={13} /> Editar</>}
+                </button>
+              )
+            }
           </div>
           <div ref={resultRef} className="max-h-[65vh] overflow-y-auto">
-            <MarkdownResult text={result} streaming={streaming} />
+            {editing ? (
+              <div
+                ref={editRef}
+                contentEditable
+                suppressContentEditableWarning
+                dangerouslySetInnerHTML={{ __html: editingHtml }}
+                onInput={(e) => recalculate(e.currentTarget as HTMLDivElement)}
+                className="px-6 py-5 text-sm text-gray-700 focus:outline-none
+                  [&_h3]:text-sm [&_h3]:font-bold [&_h3]:text-gray-900 [&_h3]:mt-5 [&_h3]:mb-2
+                  [&_table]:w-full [&_table]:border-collapse [&_table]:my-4
+                  [&_th]:text-left [&_th]:px-4 [&_th]:py-2 [&_th]:text-xs [&_th]:font-semibold [&_th]:text-green-700 [&_th]:border [&_th]:border-gray-200 [&_th]:bg-green-50
+                  [&_td]:px-4 [&_td]:py-2 [&_td]:text-gray-700 [&_td]:border [&_td]:border-gray-200
+                  [&_tr:nth-child(even)]:bg-gray-50 [&_strong]:font-semibold [&_strong]:text-gray-900"
+              />
+            ) : editingHtml ? (
+              <div
+                ref={previewRef}
+                dangerouslySetInnerHTML={{ __html: editingHtml }}
+                className="px-6 py-5 text-sm text-gray-700
+                  [&_h3]:text-sm [&_h3]:font-bold [&_h3]:text-gray-900 [&_h3]:mt-5 [&_h3]:mb-2
+                  [&_table]:w-full [&_table]:border-collapse [&_table]:my-4
+                  [&_th]:text-left [&_th]:px-4 [&_th]:py-2 [&_th]:text-xs [&_th]:font-semibold [&_th]:text-green-700 [&_th]:border [&_th]:border-gray-200 [&_th]:bg-green-50
+                  [&_td]:px-4 [&_td]:py-2 [&_td]:text-gray-700 [&_td]:border [&_td]:border-gray-200
+                  [&_tr:nth-child(even)]:bg-gray-50 [&_strong]:font-semibold [&_strong]:text-gray-900"
+              />
+            ) : (
+              <div ref={previewRef}>
+                <MarkdownResult text={result} streaming={streaming} />
+              </div>
+            )}
           </div>
         </div>
       )}
