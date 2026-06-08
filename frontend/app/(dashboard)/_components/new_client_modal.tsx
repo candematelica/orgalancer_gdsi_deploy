@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useOnboardingStep } from "./use_onboarding_step";
 
 type ClientForm = {
     id: string;
@@ -30,6 +31,7 @@ const CLIENT_TYPES = [
 
 export default function NewClientModal({ onClose, onSuccess, clientToEdit }: Props) {
     const isEditMode = !!clientToEdit;
+    const { complete } = useOnboardingStep("client");
 
     const [form, setForm] = useState({
         name: clientToEdit?.name ?? "",
@@ -88,6 +90,7 @@ export default function NewClientModal({ onClose, onSuccess, clientToEdit }: Pro
             }
 
             onSuccess();
+            complete();
             onClose();
         } catch {
             setError("Error de conexión, intentá de nuevo");
