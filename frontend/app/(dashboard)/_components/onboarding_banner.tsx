@@ -35,14 +35,12 @@ export default function OnboardingBanner() {
   const router   = useRouter();
   const pathname = usePathname();
 
-  // Navega a la ruta del paso actual cuando cambia
   useEffect(() => {
     if (!state.checked || state.skipped || !currentStep) return;
     const target = STEPS.find(s => s.key === currentStep)?.route;
     if (target && pathname !== target) router.push(target);
   }, [currentStep, state.checked, state.skipped, pathname, router]);
-
-  // Ocultar si: todavía cargando, ya completó todo, o lo omitió
+  
   if (!state.checked || allDone || state.skipped) return null;
 
   const stepIndex  = STEPS.findIndex(s => s.key === currentStep);

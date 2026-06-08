@@ -72,8 +72,6 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
 
     const settings = settingsRes.status === "fulfilled" && settingsRes.value.ok
       ? await settingsRes.value.json() : null;
-    // Perfil completo = tiene phone Y country cargados.
-    // full_name, email y profession ya vienen del registro, no son suficientes.
     const profileDone = !!(settings?.phone?.trim() && settings?.country?.trim());
 
     const clients  = clientsRes.status  === "fulfilled" && clientsRes.value.ok
@@ -114,7 +112,6 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
     setState(s => ({ ...s, skipped: false }));
   }
 
-  // Llamar desde cada página luego de un guardado exitoso
   function markStep(step: OnboardingStep) {
     setState(s => ({
       ...s,
