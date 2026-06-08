@@ -6,6 +6,8 @@ import Sidebar from "./_components/sidebar";
 import TopNavbar from "./_components/top_navbar";
 import { TimerProvider } from "./_lib/TimerContext";
 import FloatingTimerWidgetGlobal from "./_components/FloatingTimerWidgetGlobal";
+import { OnboardingProvider } from "./_components/onboarding_context";  
+import OnboardingBanner from "./_components/onboarding_banner";          
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -24,16 +26,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <TimerProvider>
-      <div className="flex h-screen overflow-hidden bg-white">
-        <Sidebar />
-        <div className="flex flex-col flex-1 overflow-hidden">
-          <TopNavbar />
-          <main className="flex-1 overflow-y-auto p-8">
-            {children}
-          </main>
+      <OnboardingProvider>                          
+        <div className="flex h-screen overflow-hidden bg-white">
+          <Sidebar />
+          <div className="flex flex-col flex-1 overflow-hidden">
+            <TopNavbar />
+            <main className="flex-1 overflow-y-auto p-8">
+              {children}
+            </main>
+          </div>
+          <FloatingTimerWidgetGlobal />
+          <OnboardingBanner />                     
         </div>
-        <FloatingTimerWidgetGlobal />
-      </div>
+      </OnboardingProvider>
     </TimerProvider>
   );
 }
