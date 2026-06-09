@@ -2,14 +2,17 @@
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type OnboardingStep = "profile" | "client" | "project";
+export type OnboardingStep = "profile" | "finances" | "client" | "project";
 
 interface StepsState {
-  profile: boolean;
-  client:  boolean;
-  project: boolean;
+  profile:  boolean;
+  finances: boolean;
+  client:   boolean;
+  project:  boolean;
 }
 
 interface OnboardingState {
@@ -39,8 +42,6 @@ export function useOnboarding() {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-// Key por usuario para que el flag no se comparta entre cuentas distintas
-// en el mismo navegador.
 function skipKey(): string {
   try {
     const raw = localStorage.getItem("user");
@@ -51,28 +52,48 @@ function skipKey(): string {
   }
 }
 
+function getUserId(): string | null {
+  try {
+    const raw = localStorage.getItem("user");
+    return raw ? JSON.parse(raw)?.id : null;
+  } catch {
+    return null;
+  }
+}
+
 // ─── Provider ────────────────────────────────────────────────────────────────
 
 export function OnboardingProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<OnboardingState>({
     checked: false,
     skipped: false,
-    steps:   { profile: false, client: false, project: false },
+    steps:   { profile: false, finances: false, client: false, project: false },
   });
 
   const checkStatus = useCallback(async () => {
     const skipped = localStorage.getItem(skipKey()) === "true";
+    const userId  = getUserId();
 
-    // Las tres consultas en paralelo: settings, clients, projects
-    const [settingsRes, clientsRes, projectsRes] = await Promise.allSettled([
+    const [settingsRes, financesRes, clientsRes, projectsRes] = await Promise.allSettled([
       fetch("/api/settings"),
+      userId ? fetch(`${API_BASE}/finances/${userId}`) : Promise.reject(),
       fetch("/api/clients"),
       fetch("/api/projects"),
     ]);
 
-    const settings = settingsRes.status === "fulfilled" && settingsRes.value.ok
+    // Perfil completo = tiene phone Y country
+    const settings    = settingsRes.status === "fulfilled" && settingsRes.value.ok
       ? await settingsRes.value.json() : null;
     const profileDone = !!(settings?.phone?.trim() && settings?.country?.trim());
+
+    // Finanzas completas = tiene hourly_rate Y profit_margin Y coin_type
+    const finances     = financesRes.status === "fulfilled" && financesRes.value.ok
+      ? await financesRes.value.json() : null;
+    const financesDone = !!(
+      finances?.hourly_rate &&
+      finances?.profit_margin &&
+      finances?.coin_type
+    );
 
     const clients  = clientsRes.status  === "fulfilled" && clientsRes.value.ok
       ? await clientsRes.value.json() : [];
@@ -83,21 +104,22 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
       checked: true,
       skipped,
       steps: {
-        profile: profileDone,
-        client:  Array.isArray(clients)  && clients.length  > 0,
-        project: Array.isArray(projects) && projects.length > 0,
+        profile:  profileDone,
+        finances: financesDone,
+        client:   Array.isArray(clients)  && clients.length  > 0,
+        project:  Array.isArray(projects) && projects.length > 0,
       },
     });
   }, []);
 
   useEffect(() => { checkStatus(); }, [checkStatus]);
 
-  // Primer paso pendiente en orden obligatorio
   const currentStep: OnboardingStep | null =
-    !state.checked        ? null
-    : !state.steps.profile ? "profile"
-    : !state.steps.client  ? "client"
-    : !state.steps.project ? "project"
+    !state.checked          ? null
+    : !state.steps.profile  ? "profile"
+    : !state.steps.finances ? "finances"
+    : !state.steps.client   ? "client"
+    : !state.steps.project  ? "project"
     : null;
 
   const allDone = state.checked && currentStep === null;
