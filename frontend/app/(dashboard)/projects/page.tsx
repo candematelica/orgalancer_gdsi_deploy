@@ -14,6 +14,7 @@ import ProjectsGrid from "./_components/projects_grid";
 import EditProjectPanel from "./_components/edit_project_panel";
 import BudgetModal from "./_components/budget_modal";
 import { useTimerContext } from "../_lib/TimerContext";
+import OnboardingStepHint from "../_components/onboarding_step_hint";
 
 export default function ProjectsPage() {
   const router = useRouter();
@@ -110,6 +111,9 @@ export default function ProjectsPage() {
           </span>
         </button>
       </SectionHeader>
+
+
+      <OnboardingStepHint step="project" />
 
       {/* form (post) */}
       {showForm && (
