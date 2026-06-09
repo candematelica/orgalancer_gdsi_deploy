@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import NewClientModal from "@/app/(dashboard)/_components/new_client_modal";
+import TimeByProjectChart from "./_components/TimeByProjectChart";
 
 type Client = {
   id: string;
@@ -254,6 +255,11 @@ export default function ClientDetailPage() {
           <p className="text-xs text-gray-400 mt-1">Se calculará con los proyectos</p>
         </div>
 
+        {/* Gráfico de tiempo por proyecto */}
+        <div className="col-span-2">
+          <TimeByProjectChart clientId={params.id as string} />
+        </div>
+
         {/* Recordatorio de pago */}
         <div className="col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
           <div className="flex items-center gap-3 mb-5">
@@ -333,7 +339,7 @@ export default function ClientDetailPage() {
           )}
         </div>
 
-        {/* Notas internas — ocupa todo el ancho si hay notas */}
+        {/* Notas internas */}
         {client.extra_info && (
           <div className="col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
             <div className="flex items-center gap-3 mb-5">
