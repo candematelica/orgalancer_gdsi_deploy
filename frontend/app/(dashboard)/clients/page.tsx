@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import NewClientModal from "@/app/(dashboard)/_components/new_client_modal";
 import SectionHeader from "./../_components/section_header"
 import { Users } from "lucide-react"
+import OnboardingStepHint from "../_components/onboarding_step_hint";
 
 type Client = {
   id: string;
@@ -127,6 +128,8 @@ export default function ClientsPage() {
           Nuevo cliente
         </button>
       </SectionHeader>
+
+      <OnboardingStepHint step="client" />
 
       {hasClients && (
         <div className="mb-5">
