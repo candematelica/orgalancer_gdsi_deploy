@@ -6,6 +6,7 @@ import NewClientModal from "@/app/(dashboard)/_components/new_client_modal";
 import SectionHeader from "./../_components/section_header"
 import { Users } from "lucide-react"
 import OnboardingStepHint from "../_components/onboarding_step_hint";
+import OnboardingBanner from "../_components/onboarding_banner";
 
 type Client = {
   id: string;
@@ -115,6 +116,7 @@ export default function ClientsPage() {
 
   return (
     <div className="h-full flex flex-col">
+      <OnboardingBanner />  
       <SectionHeader
         title="Clientes"
         subtitle="Gestiona tus relaciones comerciales"

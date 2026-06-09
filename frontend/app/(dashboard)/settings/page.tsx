@@ -7,6 +7,7 @@ import SectionHeader from "../_components/section_header";
 import SettingsNav, { type TabId } from "./_components/settings_nav";
 import ProfileTab from "./_components/profile_tab";
 import ComingSoonTab from "./_components/coming_soon_tab";
+import OnboardingBanner from "../_components/onboarding_banner";
 
 import { Settings } from "lucide-react";
 
@@ -23,6 +24,7 @@ export default function SettingsPage() {
 
   return (
     <>
+      <OnboardingBanner />
       <SectionHeader
         title="Configuración"
         subtitle="Personaliza tu experiencia en Orgalancer"
