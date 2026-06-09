@@ -173,18 +173,17 @@ export function useExpenses() {
     }
   }
 
-  async function remove(id: string): Promise<boolean> {
+  async function remove(id: string): Promise<{ ok: boolean; error?: string }> {
     try {
       const res = await fetch(`/api/expenses/${id}`, { method: "DELETE" });
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error);
+        const data = await res.json().catch(() => ({}));
+        return { ok: false, error: data.error ?? "Error al eliminar el gasto" };
       }
       setExpenses((prev) => prev.filter((e) => e.id !== id));
-      return true;
+      return { ok: true };
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al eliminar");
-      return false;
+      return { ok: false, error: "Error al eliminar el gasto" };
     }
   }
 
