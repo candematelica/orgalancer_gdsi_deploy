@@ -63,7 +63,7 @@ export default function RevenueLineChart({ transactions, currency }: Props) {
           <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
           <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${symbol}${v}`} />
           <Tooltip
-            formatter={(value: number, name: string) => [
+            formatter={(value, name) => [
               `${symbol}${value}`,
               name === "real" ? "Ingresos reales" : "Proyección",
             ]}

@@ -1,9 +1,16 @@
 import os
 import asyncio
+import uuid
+from datetime import datetime
 import anthropic
-from fastapi import APIRouter
+import resend
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
-from app.schemas.budget import BudgetRequest
+from sqlalchemy.orm import Session
+from app.database import get_db
+from app.routers.auth import get_current_user
+from app.models import Budget
+from app.schemas.budget import BudgetRequest, BudgetCreate, BudgetResponse
 
 router = APIRouter(prefix="/budget", tags=["budget"])
 
@@ -65,6 +72,117 @@ async def _stream_anthropic(prompt: str):
         yield f"data: [ERROR] {str(e)}\n\n"
     finally:
         yield "data: [DONE]\n\n"
+
+
+@router.post("", response_model=BudgetResponse, status_code=201)
+def save_budget(
+    body: BudgetCreate,
+    db: Session = Depends(get_db),
+    user = Depends(get_current_user),
+):
+    budget = Budget(
+        id           = str(uuid.uuid4()),
+        user_id      = user.id,
+        project_id   = body.project_id,
+        client_id    = body.client_id,
+        name         = body.name,
+        total_amount = body.total_amount,
+        currency     = body.currency,
+        description  = body.description,
+        created_at   = datetime.utcnow(),
+    )
+    db.add(budget)
+    db.commit()
+    db.refresh(budget)
+
+    return BudgetResponse(
+        id           = budget.id,
+        user_id      = budget.user_id,
+        project_id   = budget.project_id,
+        client_id    = budget.client_id,
+        name         = budget.name,
+        total_amount = float(budget.total_amount),
+        currency     = budget.currency,
+        description  = budget.description,
+        created_at   = budget.created_at,
+        project_name = budget.project.name if budget.project else None,
+        client_name  = budget.client.name  if budget.client  else None,
+    )
+
+
+@router.get("", response_model=list[BudgetResponse])
+def list_budgets(
+    db: Session = Depends(get_db),
+    user = Depends(get_current_user),
+):
+    budgets = db.query(Budget).filter(Budget.user_id == user.id).order_by(Budget.created_at.desc()).all()
+    return [
+        BudgetResponse(
+            id           = b.id,
+            user_id      = b.user_id,
+            project_id   = b.project_id,
+            client_id    = b.client_id,
+            name         = b.name,
+            total_amount = float(b.total_amount),
+            currency     = b.currency,
+            description  = b.description,
+            created_at   = b.created_at,
+            project_name = b.project.name if b.project else None,
+            client_name  = b.client.name  if b.client  else None,
+        )
+        for b in budgets
+    ]
+
+
+@router.post("/{budget_id}/send")
+def send_budget(
+    budget_id: str,
+    db: Session = Depends(get_db),
+    user = Depends(get_current_user),
+):
+    budget = db.query(Budget).filter(Budget.id == budget_id, Budget.user_id == user.id).first()
+    if not budget:
+        raise HTTPException(status_code=404, detail="Presupuesto no encontrado")
+    if not budget.client or not budget.client.email:
+        raise HTTPException(status_code=400, detail="El presupuesto no tiene un cliente con email asignado")
+
+    api_key = os.getenv("RESEND_API_KEY")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="RESEND_API_KEY no configurada")
+
+    resend.api_key = api_key
+
+    currency_symbols = {"USD": "$", "EUR": "€", "ARS": "$", "GBP": "£"}
+    symbol = currency_symbols.get(budget.currency, budget.currency)
+    amount = f"{symbol}{float(budget.total_amount):,.2f}"
+
+    html = f"""
+    <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px;color:#1f2937">
+      <h1 style="font-size:22px;font-weight:700;color:#111827;margin-bottom:4px">{budget.name}</h1>
+      <p style="color:#6b7280;font-size:14px;margin-bottom:24px">Presupuesto de {user.full_name}</p>
+      <hr style="border:none;border-top:1px solid #e5e7eb;margin-bottom:24px"/>
+      {"<p style='font-size:14px;color:#374151;margin-bottom:24px'><strong>Descripción:</strong> " + budget.description + "</p>" if budget.description else ""}
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:20px;margin-bottom:24px;text-align:center">
+        <p style="font-size:13px;color:#166534;margin:0 0 4px">Monto total</p>
+        <p style="font-size:28px;font-weight:700;color:#15803d;margin:0">{amount}</p>
+      </div>
+      <p style="font-size:13px;color:#9ca3af;text-align:center">
+        Este presupuesto fue generado con Orgalancer.
+      </p>
+    </div>
+    """
+
+    try:
+        resend.Emails.send({
+            "from": "Orgalancer <noreply@mail.orgalancer.app>",
+            "to": [budget.client.email],
+            "subject": f"Presupuesto: {budget.name}",
+            "html": html,
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al enviar email: {str(e)}")
+
+    return {"message": "Presupuesto enviado correctamente", "to": budget.client.email}
 
 
 @router.post("/generate")

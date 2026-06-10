@@ -108,7 +108,7 @@ export default function MonthlyRevenueChart() {
             tickFormatter={(v) => `${currency === "USD" ? "$" : currency}${v}`}
           />
           <Tooltip
-            formatter={(value: number) => [`${currency === "USD" ? "$" : currency}${value}`, "Ingresos"]}
+            formatter={(value) => [`${currency === "USD" ? "$" : currency}${value}`, "Ingresos"]}
             contentStyle={{ borderRadius: "12px", border: "1px solid #e5e7eb", fontSize: 12 }}
           />
           <Bar dataKey="total" fill="#7c3aed" radius={[6, 6, 0, 0]} />
