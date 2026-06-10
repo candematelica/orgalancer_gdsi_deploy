@@ -6,9 +6,9 @@ import { useEffect, useState } from "react";
 import type { Receipt, ReceiptStatus } from "../types";
 
 const STATUS_CONFIG: Record<ReceiptStatus, { label: string; dot: string; text: string }> = {
-  pending:   { label: "Pendiente", dot: "bg-yellow-400", text: "text-yellow-700" },
-  paid:      { label: "Cobrado",   dot: "bg-green-500",  text: "text-green-700"  },
-  cancelled: { label: "Cancelado", dot: "bg-gray-400",   text: "text-gray-500"   },
+  pending: { label: "Pendiente", dot: "bg-yellow-400", text: "text-yellow-700" },
+  paid: { label: "Cobrado", dot: "bg-green-500", text: "text-green-700" },
+  cancelled: { label: "Cancelado", dot: "bg-gray-400", text: "text-gray-500" },
 };
 
 function fmtDate(d: string) {
@@ -31,9 +31,10 @@ const shortId = (id: string) =>
 interface Props {
   receipt: Receipt | null;
   onClose: () => void;
+  onMarkAsPaid?: (id: string) => void;
 }
 
-export default function ReceiptDetailModal({ receipt, onClose }: Props) {
+export default function ReceiptDetailModal({ receipt, onClose, onMarkAsPaid }: Props) {
   const [issuerName, setIssuerName] = useState("");
 
   useEffect(() => {
@@ -86,7 +87,7 @@ export default function ReceiptDetailModal({ receipt, onClose }: Props) {
           <Dash />
 
           <div className="grid grid-cols-2 gap-4">
-            {receipt.client_name  && <Row label="Cliente"  value={receipt.client_name}  />}
+            {receipt.client_name && <Row label="Cliente" value={receipt.client_name} />}
             {receipt.project_name && <Row label="Proyecto" value={receipt.project_name} />}
           </div>
 
@@ -112,6 +113,14 @@ export default function ReceiptDetailModal({ receipt, onClose }: Props) {
 
         {/* Footer */}
         <div className="px-6 pb-5">
+          {receipt.status === "pending" && onMarkAsPaid && (
+            <button
+              onClick={() => { onMarkAsPaid(receipt.id); onClose(); }}
+              className="w-full py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-purple-500 text-white text-sm font-semibold hover:opacity-90 transition-opacity mb-2"
+            >
+              ✓ Marcar como cobrado
+            </button>
+          )}
           <button
             onClick={onClose}
             className="w-full py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"

@@ -6,6 +6,7 @@ import StatusBadge from "./status_badge";
 import DeadlineChip from "./deadline_chip";
 import ConfirmCompleteDialog from "./confirm_complete_dialog";
 import { useState } from "react";
+import PortalLinkButton from "./portal_link_button";
 
 interface ProjectCardProps {
   project: EnrichedProject;
@@ -98,9 +99,8 @@ export default function ProjectCard({
       />
 
       <div
-        className={`bg-white rounded-2xl border shadow-sm hover:shadow-md transition-shadow duration-200 flex flex-col overflow-hidden ${
-          isReadOnly ? "border-gray-100 opacity-90" : "border-gray-100"
-        }`}
+        className={`bg-white rounded-2xl border shadow-sm hover:shadow-md transition-shadow duration-200 flex flex-col overflow-hidden ${isReadOnly ? "border-gray-100 opacity-90" : "border-gray-100"
+          }`}
       >
         {/* Read-only banner */}
         {isReadOnly && (
@@ -145,6 +145,7 @@ export default function ProjectCard({
                     <Pencil className="w-3 h-3" />
                     Editar
                   </button>
+                  <PortalLinkButton projectId={project.id} />
                 </>
               )}
               <StatusBadge status={currentState} />

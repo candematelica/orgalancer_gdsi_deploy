@@ -5,7 +5,8 @@ import {
   SquareCheck,
   TrendingUp,
   Bot,
-  Settings
+  Settings,
+  BarChart3
 } from "lucide-react";
 
 export const NAV_ITEMS = [
@@ -54,6 +55,11 @@ export const NAV_ITEMS = [
     label: "Finanzas",
     href: "/finances",
     icon: <TrendingUp size={18} />,
+  },
+  {
+    label: "Reportes",
+    href: "/reports",
+    icon: <BarChart3 size={18} />,
   },
   {
     label: "Asistente Virtual",

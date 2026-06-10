@@ -14,6 +14,8 @@ import ProjectsGrid from "./_components/projects_grid";
 import EditProjectPanel from "./_components/edit_project_panel";
 import BudgetModal from "./_components/budget_modal";
 import { useTimerContext } from "../_lib/TimerContext";
+import OnboardingStepHint from "../_components/onboarding_step_hint";
+import OnboardingBanner from "../_components/onboarding_banner";
 
 export default function ProjectsPage() {
   const router = useRouter();
@@ -96,6 +98,7 @@ export default function ProjectsPage() {
         onSaved={() => { actions.reload(); actions.reloadStats(); }}
       />
       { /* header */}
+      <OnboardingBanner />
       <SectionHeader title="Proyectos" subtitle="Gestioná todos tus proyectos freelance" icon={<Briefcase className="w-8 h-8 text-indigo-600" />}>
         <button
           onClick={() => setBudgetModalOpen(true)}
@@ -114,6 +117,9 @@ export default function ProjectsPage() {
           </span>
         </button>
       </SectionHeader>
+
+
+      <OnboardingStepHint step="project" />
 
       {/* form (post) */}
       {showForm && (

@@ -4,6 +4,7 @@
 import { useEffect, useState } from "react";
 import { getUser } from "../../../_hooks/get_user";
 import { API_BASE } from "../_lib/api";
+import { useOnboardingStep } from "../../_components/use_onboarding_step";
 
 type FinancialConfig = {
   coin_type: string;
@@ -32,6 +33,7 @@ export function useFinancialForm() {
   const user = getUser();
   const [saved, setSaved] = useState(false);
   const [editing, setEditing] = useState(false);
+  const { complete } = useOnboardingStep("finances");
 
   const [formData, setFormData] = useState<FinancialConfig>({
     coin_type: "USD",
@@ -117,6 +119,7 @@ export function useFinancialForm() {
         throw new Error(text);
       }
       setSaved(true);
+      complete();
       setOriginalData(formData);
       setEditing(false);
 

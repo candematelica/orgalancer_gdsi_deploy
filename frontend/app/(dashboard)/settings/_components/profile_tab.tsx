@@ -7,6 +7,8 @@ import { AlertCircle } from "lucide-react";
 import AvatarUpload from "./avatar_upload";
 import ProfileForm, { type ProfileData } from "./profile_form";
 import SettingsShell from "./settings_layout";
+import OnboardingStepHint from "../../_components/onboarding_step_hint";
+import { useOnboarding } from "../../_components/onboarding_context";
 
 function Skeleton() {
   return (
@@ -29,6 +31,7 @@ export default function ProfileTab() {
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { state, resume } = useOnboarding();
 
   useEffect(() => {
     let cancelled = false;
@@ -57,36 +60,52 @@ export default function ProfileTab() {
     setProfile(prev => prev ? { ...prev, ...partial } : prev);
 
   return (
-    <SettingsShell title="Información Personal">
-      {loading && <Skeleton />}
-      {!loading && error && (
-        <div className="flex items-center gap-3 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
-          <AlertCircle size={16} className="shrink-0" />
-          {error}
+    <>
+      {state.skipped && !state.steps.profile && (
+        <div className="mb-4 flex items-center justify-between bg-violet-50 border border-violet-200 rounded-2xl px-5 py-3">
+          <p className="text-sm text-violet-700 font-medium">
+            ✦ Tenés pasos de configuración pendientes.
+          </p>
+          <button
+            onClick={resume}
+            className="text-sm font-semibold text-white bg-gradient-to-r from-violet-600 to-purple-500 px-4 py-1.5 rounded-xl hover:opacity-90 transition"
+          >
+            Retomar configuración
+          </button>
         </div>
       )}
-      {!loading && profile && (
-        <>
-          <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-100">
-            <div className="flex justify-between text-xs font-medium text-gray-600 mb-1.5">
-              <span>Porcentaje de finalización del perfil</span>
-              <span className="text-purple-600">{profile.completion_percentage}%</span>
-            </div>
-            <div className="w-full h-1.5 bg-white rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all duration-700"
-                style={{ width: `${profile.completion_percentage}%` }}
-              />
-            </div>
+      <SettingsShell title="Información Personal">
+        {loading && <Skeleton />}
+        {!loading && error && (
+          <div className="flex items-center gap-3 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
+            <AlertCircle size={16} className="shrink-0" />
+            {error}
           </div>
-          <AvatarUpload
-            fullName={profile.full_name}
-            avatarUrl={profile.avatar_url}
-            onUploadSuccess={url => update({ avatar_url: url })}
-          />
-          <ProfileForm profile={profile} onUpdate={update} />
-        </>
-      )}
-    </SettingsShell>
+        )}
+        {!loading && profile && (
+          <>
+            <OnboardingStepHint step="profile" />
+            <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-100">
+              <div className="flex justify-between text-xs font-medium text-gray-600 mb-1.5">
+                <span>Porcentaje de finalización del perfil</span>
+                <span className="text-purple-600">{profile.completion_percentage}%</span>
+              </div>
+              <div className="w-full h-1.5 bg-white rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all duration-700"
+                  style={{ width: `${profile.completion_percentage}%` }}
+                />
+              </div>
+            </div>
+            <AvatarUpload
+              fullName={profile.full_name}
+              avatarUrl={profile.avatar_url}
+              onUploadSuccess={url => update({ avatar_url: url })}
+            />
+            <ProfileForm profile={profile} onUpdate={update} />
+          </>
+        )}
+      </SettingsShell>
+    </>
   );
 }

@@ -4,7 +4,7 @@ from typing import Optional
 from datetime import date
 
 from app.database import get_db
-from app.models import Expense, ExpenseCategory, Project, User
+from app.models import Expense, ExpenseCategory, Project, ProjectState, User
 from app.schemas.expenses import (
     ExpenseCategoryCreate, ExpenseCategoryUpdate, ExpenseCategoryResponse,
     ExpenseCreate, ExpenseUpdate, ExpenseResponse,
@@ -97,7 +97,8 @@ def create_expense(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    _validate_category(data.category_id, current_user.id, db)
+    if data.category_id:
+        _validate_category(data.category_id, current_user.id, db)
     if data.project_id:
         _validate_project(data.project_id, current_user.id, db)
 
@@ -172,6 +173,30 @@ def update_expense(
     return _enrich(expense, db)
 
 
+@router.delete("/{expense_id}", status_code=204)
+def delete_expense(
+    expense_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    expense = db.query(Expense).filter(
+        Expense.id == expense_id,
+        Expense.user_id == current_user.id,
+    ).first()
+    if not expense:
+        raise HTTPException(status_code=404, detail="Gasto no encontrado")
+
+    if expense.project_id:
+        project = db.query(Project).filter(Project.id == expense.project_id).first()
+        if project and project.state == ProjectState.completed:
+            raise HTTPException(
+                status_code=409,
+                detail="No se puede eliminar un gasto asociado a un proyecto finalizado",
+            )
+
+    db.delete(expense)
+    db.commit()
+
 def _validate_category(category_id: str, user_id: str, db: Session) -> ExpenseCategory:
     cat = db.query(ExpenseCategory).filter(
         ExpenseCategory.id == category_id,
@@ -189,6 +214,8 @@ def _validate_project(project_id: str, user_id: str, db: Session) -> Project:
     ).first()
     if not p:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    if p.state == ProjectState.completed:
+        raise HTTPException(status_code=409, detail="No se puede asociar un gasto a un proyecto finalizado")
     return p
 
 

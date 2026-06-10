@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, date
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
 from pydantic import BaseModel, Field
 
@@ -35,8 +35,10 @@ def serialize(entry: TimeEntry) -> dict:
 
 @router.get("")
 def list_entries(
-    task_id: Optional[str] = None,
-    project_id: Optional[str] = None,
+    task_id:    Optional[str]  = None,
+    project_id: Optional[str]  = None,
+    from_date:  Optional[date] = Query(None, alias="from"),
+    to_date:    Optional[date] = Query(None, alias="to"),
     db:   Session = Depends(get_db),
     user = Depends(get_current_user),
 ):
@@ -49,6 +51,10 @@ def list_entries(
         q = q.filter(TimeEntry.task_id == task_id)
     if project_id:
         q = q.filter(TimeEntry.project_id == project_id)
+    if from_date:
+        q = q.filter(TimeEntry.entry_date >= from_date)
+    if to_date:
+        q = q.filter(TimeEntry.entry_date <= to_date)
 
     entries = q.order_by(TimeEntry.entry_date.desc(), TimeEntry.created_at.desc()).all()
     return [serialize(e) for e in entries]

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useOnboardingStep } from "../../_components/use_onboarding_step";
 
 type ProjectFormData = {
   client_id: string;
@@ -24,6 +25,7 @@ export function useCreateProjectForm() {
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(false);
   const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
+  const { complete } = useOnboardingStep("project");
 
   useEffect(() => {
     const fetchClients = async () => {
@@ -79,6 +81,7 @@ export function useCreateProjectForm() {
       setFormData(INITIAL_STATE);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
+      complete();
       return true;
 
     } catch (err) {

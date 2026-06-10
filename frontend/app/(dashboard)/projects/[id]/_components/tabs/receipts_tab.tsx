@@ -1,29 +1,29 @@
 "use client";
 
-import { useEffect, useState }  from "react";
-import { useReceipts }          from "./../../../../_receipts/_hooks/use_receipts";
-import type { Receipt }         from "./../../../../_receipts/types";
-import ReceiptRow               from "./../../../../_receipts/_components/receipt_row";
-import ReceiptDetailModal       from "./../../../../_receipts/_components/receipt_detail_modal";
-import CreateReceiptModal       from "./../../../../_receipts/_components/create_receipt_modal";
+import { useEffect, useState } from "react";
+import { useReceipts } from "./../../../../_receipts/_hooks/use_receipts";
+import type { Receipt } from "./../../../../_receipts/types";
+import ReceiptRow from "./../../../../_receipts/_components/receipt_row";
+import ReceiptDetailModal from "./../../../../_receipts/_components/receipt_detail_modal";
+import CreateReceiptModal from "./../../../../_receipts/_components/create_receipt_modal";
 
 export interface ReceiptsTabProps {
-  projectId?:  string | null;
-  clientId?:   string | null;
+  projectId?: string | null;
+  clientId?: string | null;
   clientName?: string | null;
 }
 
 export default function ReceiptsTab({ projectId, clientId, clientName }: ReceiptsTabProps) {
-  const { receipts, loading, error, load, create, remove } = useReceipts();
-  const [createOpen,      setCreateOpen]      = useState(false);
-  const [viewingReceipt,  setViewingReceipt]  = useState<Receipt | null>(null);
+  const { receipts, loading, error, load, create, remove, markAs } = useReceipts();
+  const [createOpen, setCreateOpen] = useState(false);
+  const [viewingReceipt, setViewingReceipt] = useState<Receipt | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-  const [deleteLoading,   setDeleteLoading]   = useState<string | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
 
   useEffect(() => {
     load({
       ...(projectId ? { project_id: projectId } : {}),
-      ...(clientId  ? { client_id:  clientId  } : {}),
+      ...(clientId ? { client_id: clientId } : {}),
     });
   }, [projectId, clientId, load]);
 
@@ -44,8 +44,8 @@ export default function ReceiptsTab({ projectId, clientId, clientName }: Receipt
             {loading
               ? "Cargando..."
               : receipts.length === 0
-              ? "Sin recibos generados aún"
-              : `${receipts.length} recibo${receipts.length !== 1 ? "s" : ""}`}
+                ? "Sin recibos generados aún"
+                : `${receipts.length} recibo${receipts.length !== 1 ? "s" : ""}`}
           </p>
         </div>
         <button
@@ -122,6 +122,11 @@ export default function ReceiptsTab({ projectId, clientId, clientName }: Receipt
       <ReceiptDetailModal
         receipt={viewingReceipt}
         onClose={() => setViewingReceipt(null)}
+        onMarkAsPaid={async (id) => {
+          await markAs(id, "paid");
+          setViewingReceipt(null);
+          load({ ...(projectId ? { project_id: projectId } : {}), ...(clientId ? { client_id: clientId } : {}) });
+        }}
       />
     </>
   );
