@@ -4,6 +4,7 @@
 
 import { useState, useEffect } from "react";
 import { ProfileData } from "../_components/profile_form";
+import { useOnboardingStep } from "../../_components/use_onboarding_step";
 
 function splitName(full: string) {
   const parts = full.trim().split(/\s+/);
@@ -24,6 +25,7 @@ export function useProfileForm(profile: ProfileData, onUpdate: (updated: Partial
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { complete } = useOnboardingStep("profile");
 
   useEffect(() => {
     const { first, last } = splitName(profile.full_name);
@@ -82,6 +84,7 @@ export function useProfileForm(profile: ProfileData, onUpdate: (updated: Partial
 
       const updated: Partial<ProfileData> = await res.json();
       onUpdate(updated);
+      complete();
 
       try {
         const raw = localStorage.getItem("user");

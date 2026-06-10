@@ -8,6 +8,8 @@ import FinancialForm from "./_components/financial_form";
 import TariffCalculator from "./_components/tariff_calculator";
 import { useFinancialForm } from "./_hooks/use_financial_form";
 import ExpensesShell from "./_components/expenses_shell";
+import OnboardingStepHint from "../_components/onboarding_step_hint";
+import OnboardingBanner from "../_components/onboarding_banner";
 
 interface StoredUser {
   id: string;
@@ -27,11 +29,13 @@ export default function FinancesPage() {
 
   return (
     <>
+      <OnboardingBanner />
       <SectionHeader
         title="Finanzas"
         subtitle="Configurá tus datos para calcular tarifas"
         icon={<Wallet className="w-8 h-8 text-indigo-600"/>}
       />
+      <OnboardingStepHint step="finances" />
 
       <div className="flex flex-col gap-10 px-4">
 
