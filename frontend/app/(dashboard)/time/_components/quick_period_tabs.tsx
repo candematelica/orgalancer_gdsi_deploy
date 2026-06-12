@@ -10,7 +10,7 @@ interface Props {
 }
 
 const OPTIONS: { value: QuickPeriod; label: string; sub: string; icon: React.ReactNode }[] = [
-  { value: "today", label: "Hoy",         sub: "día actual h",  icon: <Sun size={14} />           },
+  { value: "today", label: "Hoy",         sub: "día actual",  icon: <Sun size={14} />           },
   { value: "week",  label: "Esta semana", sub: "lun → hoy",     icon: <CalendarDays size={14} />  },
   { value: "month", label: "Este mes",    sub: "1° → hoy",      icon: <CalendarRange size={14} /> },
 ];
