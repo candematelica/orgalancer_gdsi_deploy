@@ -9,17 +9,26 @@ import TimeBarChart     from "./_components/time_bar_chart";
 import ProjectBreakdown from "./_components/project_breakdown";
 import ActivityHeatmap  from "./_components/activity_heat_map";
 import TimeEntriesTable from "./_components/time_entries_table";
+import QuickPeriodTabs  from "./_components/quick_period_tabs";
 import { useTimeEntries } from "./_hooks/use_time_entries";
+import type { QuickPeriod } from "./_hooks/use_time_entries";
 
 function buildPeriodLabel(
   filters: { from: string; to: string; project_id: string; source: string },
   projects: { id: string; name: string }[],
+  quickPeriod: QuickPeriod | null,
 ): string {
   const fmt = (iso: string) =>
     new Date(iso + "T00:00:00").toLocaleDateString("es-AR", {
       day: "numeric", month: "short", year: "numeric",
     });
-  const parts: string[] = [`${fmt(filters.from)} al ${fmt(filters.to)}`];
+  const quickLabels: Record<QuickPeriod, string> = {
+    today: "Hoy",
+    week:  "Esta semana",
+    month: "Este mes",
+  };
+  const base = quickPeriod ? quickLabels[quickPeriod] : `${fmt(filters.from)} al ${fmt(filters.to)}`;
+  const parts: string[] = [base];
   if (filters.project_id) {
     const name = projects.find((p) => p.id === filters.project_id)?.name;
     if (name) parts.push(name);
@@ -33,10 +42,11 @@ export default function TimePage() {
     entries, loading, error,
     filters,
     periodView, setPeriodView,
+    quickPeriod, applyQuickPeriod,
     applyFilters, clearFilters, removeFilter,
     fetchAll, fetchFiltered,
     totalMinutes, activeDays, avgMinutesPerDay,
-    timerMinutes, topProject, projectSummaries,
+    topProject, projectSummaries,
     buckets, heatmap,
     uniqueProjects, uniqueTasks,
     INITIAL_FILTERS,
@@ -45,12 +55,11 @@ export default function TimePage() {
   useEffect(() => {
     fetchAll();
     fetchFiltered(filters);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const periodLabel = useMemo(
-    () => buildPeriodLabel(filters, uniqueProjects),
-    [filters, uniqueProjects],
+    () => buildPeriodLabel(filters, uniqueProjects, quickPeriod),
+    [filters, uniqueProjects, quickPeriod],
   );
 
   return (
@@ -61,7 +70,8 @@ export default function TimePage() {
         icon={<Clock className="w-8 h-8 text-violet-600" />}
       />
 
-      {/* global filter */}
+      <QuickPeriodTabs active={quickPeriod} loading={loading} onChange={applyQuickPeriod} />
+
       <FilterBar
         filters={filters}
         initialFilters={INITIAL_FILTERS}
@@ -79,38 +89,16 @@ export default function TimePage() {
         </div>
       )}
 
-      {/* active period indicator */}
-      <div className="flex items-center gap-2 px-1">
-        {loading
-          ? <span className="w-2 h-2 rounded-full bg-violet-300 animate-ping" />
-          : <span className="w-2 h-2 rounded-full bg-violet-400" />
-        }
-        <p className="text-xs text-gray-500 font-medium">
-          {loading
-            ? <span className="text-gray-400 italic">Actualizando…</span>
-            : <>Mostrando: <span className="text-gray-700 font-semibold">{periodLabel}</span></>
-          }
-        </p>
-      </div>
+      <TimeStatCards
+        totalMinutes={totalMinutes}
+        activeDays={activeDays}
+        avgMinutesPerDay={avgMinutesPerDay}
+        topProject={topProject}
+        entryCount={entries.length}
+        periodLabel={periodLabel}
+        loading={loading}
+      />
 
-      {/* stat cards */}
-      <div className="relative">
-        {loading && (
-          <div className="absolute inset-0 bg-white/60 rounded-2xl z-10 flex items-center justify-center backdrop-blur-[1px]">
-            <div className="w-7 h-7 border-2 border-violet-400 border-t-transparent rounded-full animate-spin" />
-          </div>
-        )}
-        <TimeStatCards
-          totalMinutes={totalMinutes}
-          activeDays={activeDays}
-          avgMinutesPerDay={avgMinutesPerDay}
-          topProject={topProject}
-          entryCount={entries.length}
-          timerMinutes={timerMinutes}
-        />
-      </div>
-
-      {/* Chart + Breakdown con overlay de loading */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2">
           <TimeBarChart
@@ -121,17 +109,11 @@ export default function TimePage() {
             loading={loading}
           />
         </div>
-        <div className="lg:col-span-1 relative">
-          {loading && (
-            <div className="absolute inset-0 bg-white/60 rounded-2xl z-10 flex items-center justify-center backdrop-blur-[1px]">
-              <div className="w-6 h-6 border-2 border-violet-400 border-t-transparent rounded-full animate-spin" />
-            </div>
-          )}
-          <ProjectBreakdown summaries={projectSummaries} />
+        <div className="lg:col-span-1">
+          <ProjectBreakdown summaries={projectSummaries} loading={loading} />
         </div>
       </div>
 
-      {/* history */}
       <TimeEntriesTable
         entries={entries}
         filters={filters}
@@ -139,14 +121,12 @@ export default function TimePage() {
         periodLabel={periodLabel}
       />
 
-      {/* separator */}
       <div className="flex items-center gap-4 pt-2">
         <div className="flex-1 border-t border-gray-200" />
         <span className="text-xs text-gray-400 font-medium whitespace-nowrap">Actividad anual · independiente de los filtros</span>
         <div className="flex-1 border-t border-gray-200" />
       </div>
 
-      {/* heatmap - last 365 days */}
       <ActivityHeatmap cells={heatmap} />
     </div>
   );

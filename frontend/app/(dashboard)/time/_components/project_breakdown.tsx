@@ -3,15 +3,16 @@ import type { ProjectSummary } from "../_hooks/use_time_entries";
 
 interface Props {
   summaries: ProjectSummary[];
+  loading?:  boolean;
 }
 
 const PROJECT_COLORS = [
-  { bar: "bg-violet-500", text: "text-violet-600", light: "bg-violet-50" },
-  { bar: "bg-blue-500",   text: "text-blue-600",   light: "bg-blue-50"   },
-  { bar: "bg-emerald-500",text: "text-emerald-600", light: "bg-emerald-50"},
-  { bar: "bg-amber-500",  text: "text-amber-600",   light: "bg-amber-50"  },
-  { bar: "bg-rose-500",   text: "text-rose-600",    light: "bg-rose-50"   },
-  { bar: "bg-cyan-500",   text: "text-cyan-600",    light: "bg-cyan-50"   },
+  { bar: "bg-violet-500", text: "text-violet-600" },
+  { bar: "bg-blue-500",   text: "text-blue-600"   },
+  { bar: "bg-emerald-500",text: "text-emerald-600" },
+  { bar: "bg-amber-500",  text: "text-amber-600"   },
+  { bar: "bg-rose-500",   text: "text-rose-600"    },
+  { bar: "bg-cyan-500",   text: "text-cyan-600"    },
 ];
 
 function fmtHours(minutes: number): string {
@@ -22,7 +23,19 @@ function fmtHours(minutes: number): string {
   return `${h}h ${m}m`;
 }
 
-export default function ProjectBreakdown({ summaries }: Props) {
+function SkeletonRow() {
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between">
+        <div className="h-3.5 w-32 rounded bg-gray-100 animate-pulse" />
+        <div className="h-3.5 w-16 rounded bg-gray-100 animate-pulse" />
+      </div>
+      <div className="h-2 w-full rounded-full bg-gray-100 animate-pulse" />
+    </div>
+  );
+}
+
+export default function ProjectBreakdown({ summaries, loading }: Props) {
   const visible = summaries.slice(0, 6);
 
   return (
@@ -32,7 +45,11 @@ export default function ProjectBreakdown({ summaries }: Props) {
         Distribución por proyecto
       </h3>
 
-      {visible.length === 0 ? (
+      {loading ? (
+        <div className="space-y-4">
+          {Array.from({ length: 4 }).map((_, i) => <SkeletonRow key={i} />)}
+        </div>
+      ) : visible.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-48 text-gray-300">
           <PieChart size={40} className="mb-3 opacity-40" />
           <p className="text-sm text-gray-400">Sin datos</p>
@@ -46,17 +63,11 @@ export default function ProjectBreakdown({ summaries }: Props) {
                 <div className="flex items-center justify-between mb-1.5">
                   <div className="flex items-center gap-2 min-w-0">
                     <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${color.bar}`} />
-                    <span className="text-sm font-medium text-gray-700 truncate">
-                      {p.project_name}
-                    </span>
+                    <span className="text-sm font-medium text-gray-700 truncate">{p.project_name}</span>
                   </div>
                   <div className="flex items-center gap-3 shrink-0 ml-2">
-                    <span className={`text-xs font-bold ${color.text}`}>
-                      {p.percentage.toFixed(0)}%
-                    </span>
-                    <span className="text-xs text-gray-400 w-14 text-right">
-                      {fmtHours(p.total_minutes)}
-                    </span>
+                    <span className={`text-xs font-bold ${color.text}`}>{p.percentage.toFixed(0)}%</span>
+                    <span className="text-xs text-gray-400 w-14 text-right">{fmtHours(p.total_minutes)}</span>
                   </div>
                 </div>
                 <div className="h-2 bg-gray-100 rounded-full overflow-hidden">

@@ -31,7 +31,7 @@ export interface ProjectSummary {
 
 export interface PeriodBucket {
   label: string;
-  key: string;   // iso key for sorting/gaps
+  key: string;
   minutes: number;
   hours: number;
 }
@@ -43,14 +43,34 @@ export interface HeatmapCell {
 }
 
 export type PeriodView = "daily" | "weekly" | "monthly";
+export type QuickPeriod = "today" | "week" | "month";
 
-// helpers
+function toISO(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
 
-function defaultRange(): { from: string; to: string } {
-  const to = new Date();
-  const from = new Date();
-  from.setDate(from.getDate() - 29);
-  return { from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10) };
+export function getQuickRange(period: QuickPeriod): { from: string; to: string } {
+  const now = new Date();
+  const today = toISO(now);
+  if (period === "today") return { from: today, to: today };
+  if (period === "week") {
+    const day = now.getDay() === 0 ? 6 : now.getDay() - 1;
+    const mon = new Date(now);
+    mon.setDate(now.getDate() - day);
+    return { from: toISO(mon), to: today };
+  }
+  const from = new Date(now.getFullYear(), now.getMonth(), 1);
+  return { from: toISO(from), to: today };
+}
+
+/** Returns which QuickPeriod a given from/to range matches, or null if custom */
+export function detectQuickPeriod(from: string, to: string): QuickPeriod | null {
+  const periods: QuickPeriod[] = ["today", "week", "month"];
+  for (const p of periods) {
+    const r = getQuickRange(p);
+    if (r.from === from && r.to === to) return p;
+  }
+  return null;
 }
 
 function isoMonday(dateStr: string): string {
@@ -80,30 +100,19 @@ function addMonths(isoYM: string, n: number): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
-/* generate every daily/weekly/monthly key in [from, to] */
 function allKeysInRange(from: string, to: string, view: PeriodView): string[] {
   const keys: string[] = [];
-
   if (view === "daily") {
     let cur = from;
-    while (cur <= to) {
-      keys.push(cur);
-      cur = addDays(cur, 1);
-    }
+    while (cur <= to) { keys.push(cur); cur = addDays(cur, 1); }
   } else if (view === "weekly") {
     let cur = isoMonday(from);
     const toMon = isoMonday(to);
-    while (cur <= toMon) {
-      keys.push(cur);
-      cur = addDays(cur, 7);
-    }
+    while (cur <= toMon) { keys.push(cur); cur = addDays(cur, 7); }
   } else {
     let cur = from.slice(0, 7);
     const toYM = to.slice(0, 7);
-    while (cur <= toYM) {
-      keys.push(cur);
-      cur = addMonths(cur, 1);
-    }
+    while (cur <= toYM) { keys.push(cur); cur = addMonths(cur, 1); }
   }
   return keys;
 }
@@ -118,17 +127,14 @@ function keyToLabel(key: string, view: PeriodView): string {
 }
 
 export function buildBuckets(entries: TimeEntry[], view: PeriodView, from: string, to: string): PeriodBucket[] {
-  // aggregate
   const map = new Map<string, number>();
   entries.forEach((e) => {
     const key =
-      view === "daily"   ? e.entry_date :
-      view === "weekly"  ? isoMonday(e.entry_date) :
+      view === "daily"  ? e.entry_date :
+      view === "weekly" ? isoMonday(e.entry_date) :
       e.entry_date.slice(0, 7);
     map.set(key, (map.get(key) ?? 0) + Number(e.duration_minutes));
   });
-
-  // fill every period in range (gaps = 0)
   return allKeysInRange(from, to, view).map((key) => {
     const minutes = map.get(key) ?? 0;
     return { key, label: keyToLabel(key, view), minutes, hours: Math.round((minutes / 60) * 10) / 10 };
@@ -140,8 +146,6 @@ export function buildHeatmap(entries: TimeEntry[]): HeatmapCell[] {
   entries.forEach((e) => {
     map.set(e.entry_date, (map.get(e.entry_date) ?? 0) + Number(e.duration_minutes));
   });
-
-  // levels: 0 = no activity (light gray), 1-4 = activity intensity
   const today = new Date();
   const cells: HeatmapCell[] = [];
   for (let i = 364; i >= 0; i--) {
@@ -150,21 +154,19 @@ export function buildHeatmap(entries: TimeEntry[]): HeatmapCell[] {
     const iso = d.toISOString().slice(0, 10);
     const minutes = map.get(iso) ?? 0;
     let level: 0 | 1 | 2 | 3 | 4 = 0;
-    if      (minutes <= 0)    level = 0;
-    else if (minutes <= 60)   level = 1;
-    else if (minutes <= 180)  level = 2;
-    else if (minutes <= 360)  level = 3;
-    else                      level = 4;
+    if      (minutes <= 0)   level = 0;
+    else if (minutes <= 60)  level = 1;
+    else if (minutes <= 180) level = 2;
+    else if (minutes <= 360) level = 3;
+    else                     level = 4;
     cells.push({ date: iso, minutes, level });
   }
   return cells;
 }
 
-// hook
-
 export function useTimeEntries() {
-  const range = defaultRange();
-  const INITIAL: TimeFilters = { project_id: "", task_id: "", from: range.from, to: range.to, source: "" };
+  const monthRange = getQuickRange("month");
+  const INITIAL: TimeFilters = { project_id: "", task_id: "", from: monthRange.from, to: monthRange.to, source: "" };
 
   const [allEntries, setAllEntries] = useState<TimeEntry[]>([]);
   const [entries, setEntries]       = useState<TimeEntry[]>([]);
@@ -172,6 +174,7 @@ export function useTimeEntries() {
   const [error, setError]           = useState<string | null>(null);
   const [filters, setFilters]       = useState<TimeFilters>(INITIAL);
   const [periodView, setPeriodView] = useState<PeriodView>("daily");
+  const [quickPeriod, setQuickPeriod] = useState<QuickPeriod | null>("month");
 
   const fetchAll = useCallback(async () => {
     try {
@@ -190,12 +193,9 @@ export function useTimeEntries() {
       if (f.task_id)    qs.set("task_id",    f.task_id);
       if (f.from)       qs.set("from",       f.from);
       if (f.to)         qs.set("to",         f.to);
-
       const res = await fetch(`/api/time-entries?${qs.toString()}`);
       if (!res.ok) throw new Error("Error al cargar las entradas");
       const data: TimeEntry[] = await res.json();
-
-      // source is client-side AND - applied on top of server results
       setEntries(f.source ? data.filter((e) => e.source === f.source) : data);
     } catch (err: any) {
       setError(err.message);
@@ -206,26 +206,43 @@ export function useTimeEntries() {
 
   const applyFilters = useCallback((next: TimeFilters) => {
     setFilters(next);
+    // Re-detect quick period after applying — if only project/source/task changed, keep it
+    const detected = detectQuickPeriod(next.from, next.to);
+    setQuickPeriod(detected);
     fetchFiltered(next);
   }, [fetchFiltered]);
 
-  const clearFilters = useCallback(() => {
-    setFilters(INITIAL);
-    fetchFiltered(INITIAL);
-  }, [fetchFiltered]);
-
-  const removeFilter = useCallback((key: keyof TimeFilters) => {
-    const next: TimeFilters = {
-      ...filters,
-      [key]: key === "from" ? INITIAL.from : key === "to" ? INITIAL.to : "",
-    };
-    // if removing "from" pill (which covers both dates), reset both
-    if (key === "from") { next.from = INITIAL.from; next.to = INITIAL.to; }
+  const applyQuickPeriod = useCallback((period: QuickPeriod) => {
+    const range = getQuickRange(period);
+    const next: TimeFilters = { ...filters, from: range.from, to: range.to };
+    setQuickPeriod(period);
     setFilters(next);
+    if (period === "today") setPeriodView("daily");
+    if (period === "week")  setPeriodView("daily");
+    if (period === "month") setPeriodView("daily");
     fetchFiltered(next);
   }, [filters, fetchFiltered]);
 
-  // derived
+  const clearFilters = useCallback(() => {
+    const range = getQuickRange("month");
+    const next: TimeFilters = { project_id: "", task_id: "", from: range.from, to: range.to, source: "" };
+    setFilters(next);
+    setQuickPeriod("month");
+    fetchFiltered(next);
+  }, [fetchFiltered]);
+
+  const removeFilter = useCallback((key: keyof TimeFilters) => {
+    const range = getQuickRange("month");
+    const next: TimeFilters = {
+      ...filters,
+      [key]: key === "from" ? range.from : key === "to" ? range.to : "",
+    };
+    if (key === "from") { next.from = range.from; next.to = range.to; }
+    setFilters(next);
+    setQuickPeriod(detectQuickPeriod(next.from, next.to));
+    fetchFiltered(next);
+  }, [filters, fetchFiltered]);
+
   const totalMinutes     = useMemo(() => entries.reduce((s, e) => s + Number(e.duration_minutes), 0), [entries]);
   const activeDays       = useMemo(() => new Set(entries.map((e) => e.entry_date)).size, [entries]);
   const avgMinutesPerDay = activeDays > 0 ? totalMinutes / activeDays : 0;
@@ -276,6 +293,7 @@ export function useTimeEntries() {
     entries, allEntries, loading, error,
     filters, setFilters,
     periodView, setPeriodView,
+    quickPeriod, applyQuickPeriod,
     applyFilters, clearFilters, removeFilter,
     fetchAll, fetchFiltered,
     totalMinutes, activeDays, avgMinutesPerDay, timerMinutes,

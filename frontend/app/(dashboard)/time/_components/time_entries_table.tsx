@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Clock, MousePointerClick, Timer,
   ChevronLeft, ChevronRight, List, Download,
@@ -8,9 +8,9 @@ import {
 import type { TimeEntry, TimeFilters } from "../_hooks/use_time_entries";
 
 interface Props {
-  entries:    TimeEntry[];
-  filters:    TimeFilters;
-  loading:    boolean;
+  entries:     TimeEntry[];
+  filters:     TimeFilters;
+  loading:     boolean;
   periodLabel: string;
 }
 
@@ -51,27 +51,42 @@ function exportCSV(entries: TimeEntry[]) {
   URL.revokeObjectURL(url);
 }
 
+function SkeletonRow() {
+  return (
+    <tr className="border-b border-gray-50">
+      {[
+        "w-24", "w-28", "w-20", "w-14", "w-40", "w-16",
+      ].map((w, i) => (
+        <td key={i} className="px-5 py-3.5">
+          <div className={`h-4 ${w} rounded-md bg-gray-100 animate-pulse`} />
+        </td>
+      ))}
+    </tr>
+  );
+}
+
 export default function TimeEntriesTable({ entries, filters, loading, periodLabel }: Props) {
   const [page, setPage] = useState(1);
+
+  useEffect(() => { setPage(1); }, [entries]);
 
   const pageCount = Math.max(1, Math.ceil(entries.length / PAGE_SIZE));
   const paginated = entries.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  // reset page when entries change
-  useState(() => { setPage(1); });
-
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-      {/* header */}
       <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-b border-gray-50">
         <div>
           <h3 className="text-sm font-semibold text-gray-600 flex items-center gap-2">
             <List size={15} className="text-violet-400" />
             Historial de entradas
           </h3>
-          <p className="text-xs text-gray-400 mt-0.5">{periodLabel} · {entries.length} resultado{entries.length !== 1 ? "s" : ""}</p>
+          {loading
+            ? <div className="h-3 w-48 mt-1.5 rounded bg-gray-100 animate-pulse" />
+            : <p className="text-xs text-gray-400 mt-0.5">{periodLabel} · {entries.length} resultado{entries.length !== 1 ? "s" : ""}</p>
+          }
         </div>
-        {entries.length > 0 && (
+        {!loading && entries.length > 0 && (
           <button
             onClick={() => exportCSV(entries)}
             className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-violet-600 bg-violet-50 hover:bg-violet-100 border border-violet-200 rounded-xl transition-colors"
@@ -82,7 +97,6 @@ export default function TimeEntriesTable({ entries, filters, loading, periodLabe
         )}
       </div>
 
-      {/* table */}
       <div className="overflow-x-auto">
         <table className="w-full text-left">
           <thead>
@@ -96,14 +110,7 @@ export default function TimeEntriesTable({ entries, filters, loading, periodLabe
           </thead>
           <tbody>
             {loading ? (
-              <tr>
-                <td colSpan={6} className="px-5 py-14 text-center">
-                  <div className="flex flex-col items-center text-gray-300">
-                    <Clock size={32} className="mb-3 text-violet-200 animate-pulse" />
-                    <p className="text-sm text-gray-400">Cargando entradas…</p>
-                  </div>
-                </td>
-              </tr>
+              Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)
             ) : paginated.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-5 py-16 text-center">
@@ -153,8 +160,7 @@ export default function TimeEntriesTable({ entries, filters, loading, periodLabe
         </table>
       </div>
 
-      {/* pagination */}
-      {pageCount > 1 && (
+      {!loading && pageCount > 1 && (
         <div className="flex items-center justify-between px-6 py-3 border-t border-gray-50 bg-gray-50/50">
           <p className="text-xs text-gray-400">
             Mostrando {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, entries.length)} de {entries.length}

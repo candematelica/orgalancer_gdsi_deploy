@@ -1,4 +1,4 @@
-import { Clock, TrendingUp, Layers, CalendarCheck, Timer, Info } from "lucide-react";
+import { Clock, TrendingUp, Layers, CalendarCheck, Info } from "lucide-react";
 import type { ProjectSummary } from "../_hooks/use_time_entries";
 
 interface Props {
@@ -7,7 +7,8 @@ interface Props {
   avgMinutesPerDay: number;
   topProject:       ProjectSummary | null;
   entryCount:       number;
-  timerMinutes:     number;
+  periodLabel:      string;
+  loading?:         boolean;
 }
 
 function fmtH(min: number): string {
@@ -18,14 +19,34 @@ function fmtH(min: number): string {
   return `${h}h ${m}m`;
 }
 
+function Shimmer({ className }: { className: string }) {
+  return (
+    <div className={`rounded-lg bg-gray-200 animate-pulse ${className}`} />
+  );
+}
+
+function SkeletonCard({ accent }: { accent: string }) {
+  return (
+    <div className="relative bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center gap-4 overflow-hidden">
+      <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl ${accent}`} />
+      <Shimmer className="w-11 h-11 rounded-xl shrink-0" />
+      <div className="flex-1 space-y-2">
+        <Shimmer className="h-3 w-24" />
+        <Shimmer className="h-6 w-32" />
+        <Shimmer className="h-3 w-40" />
+      </div>
+    </div>
+  );
+}
+
 interface CardProps {
-  iconBg:  string;
-  icon:    React.ReactNode;
-  label:   string;
-  value:   string;
-  sub?:    string;
+  iconBg:   string;
+  icon:     React.ReactNode;
+  label:    string;
+  value:    string;
+  sub?:     string;
   tooltip?: string;
-  accent?: string;
+  accent?:  string;
 }
 
 function StatCard({ iconBg, icon, label, value, sub, tooltip, accent }: CardProps) {
@@ -54,9 +75,16 @@ function StatCard({ iconBg, icon, label, value, sub, tooltip, accent }: CardProp
   );
 }
 
-export default function TimeStatCards({ totalMinutes, activeDays, avgMinutesPerDay, topProject, entryCount, timerMinutes }: Props) {
-  const timerPct = totalMinutes > 0 ? Math.round((timerMinutes / totalMinutes) * 100) : 0;
-  const manualMinutes = totalMinutes - timerMinutes;
+const ACCENTS = ["bg-violet-400", "bg-blue-400", "bg-emerald-400", "bg-amber-400"];
+
+export default function TimeStatCards({ totalMinutes, activeDays, avgMinutesPerDay, topProject, entryCount, periodLabel, loading }: Props) {
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        {ACCENTS.map((a) => <SkeletonCard key={a} accent={a} />)}
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -65,7 +93,7 @@ export default function TimeStatCards({ totalMinutes, activeDays, avgMinutesPerD
         icon={<Clock size={20} strokeWidth={2.5} />}
         label="Total registrado"
         value={fmtH(totalMinutes)}
-        sub={`${entryCount} entrada${entryCount !== 1 ? "s" : ""} en el período`}
+        sub={`${entryCount} entrada${entryCount !== 1 ? "s" : ""} · ${periodLabel}`}
         accent="bg-violet-400"
       />
       <StatCard
@@ -73,16 +101,16 @@ export default function TimeStatCards({ totalMinutes, activeDays, avgMinutesPerD
         icon={<CalendarCheck size={20} strokeWidth={2.5} />}
         label="Días trabajados"
         value={`${activeDays} día${activeDays !== 1 ? "s" : ""}`}
-        sub={activeDays > 0 ? `${fmtH(avgMinutesPerDay)} promedio por día activo` : "sin actividad"}
+        sub={activeDays > 0 ? `${fmtH(avgMinutesPerDay)} promedio por día` : "sin actividad"}
         accent="bg-blue-400"
       />
       <StatCard
         iconBg="bg-emerald-50 text-emerald-500"
-        icon={<Timer size={20} strokeWidth={2.5} />}
-        label="Timer vs Manual"
-        value={totalMinutes > 0 ? `${timerPct}% timer` : "—"}
-        sub={totalMinutes > 0 ? `${fmtH(timerMinutes)} timer · ${fmtH(manualMinutes)} manual` : "sin datos"}
-        tooltip="Timer: tiempo iniciado con el cronómetro. Manual: cargado a mano."
+        icon={<TrendingUp size={20} strokeWidth={2.5} />}
+        label="Promedio diario"
+        value={activeDays > 0 ? fmtH(avgMinutesPerDay) : "—"}
+        sub={activeDays > 0 ? `sobre ${activeDays} día${activeDays !== 1 ? "s" : ""} activo${activeDays !== 1 ? "s" : ""}` : "sin datos"}
+        tooltip="Promedio calculado solo sobre días con actividad registrada."
         accent="bg-emerald-400"
       />
       <StatCard
