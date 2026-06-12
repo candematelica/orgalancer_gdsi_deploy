@@ -73,21 +73,17 @@ export default function TimeBarChart({ buckets, periodView, onChangePeriod, peri
         )}
         {buckets.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={buckets} margin={{ top: 4, right: 8, bottom: 8, left: 0 }}>
+            <BarChart data={buckets} margin={{ top: 10, right: 10, bottom: 20, left: 10 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
               <XAxis
-                dataKey="label"
+              dataKey="label"
                 axisLine={false}
                 tickLine={false}
-                tick={
-                  periodView === "weekly"
-                    ? { fill: "#9ca3af", fontSize: 10, textAnchor: "end" }
-                    : { fill: "#9ca3af", fontSize: 11 }
-                }
+                tick={{ fill: "#9ca3af", fontSize: 10, textAnchor: "end" }}
                 angle={periodView === "weekly" ? -40 : 0}
-                dy={periodView === "weekly" ? 4 : 8}
-                dx={periodView === "weekly" ? -4 : 0}
-                height={periodView === "weekly" ? 52 : 30}
+                dy={periodView === "weekly" ? 10 : 8}
+                dx={periodView === "weekly" ? -5 : 0}
+                height={periodView === "weekly" ? 60 : 30}  
                 interval={
                   periodView === "daily"   ? Math.max(0, Math.floor(buckets.length / 8)) :
                   periodView === "weekly"  ? Math.max(0, Math.floor(buckets.length / 10)) :
