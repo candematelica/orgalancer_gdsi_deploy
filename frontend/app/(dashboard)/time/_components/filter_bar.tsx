@@ -134,7 +134,7 @@ export default function FilterBar({
               <div className="flex gap-2 ml-auto">
                 <button onClick={handleApply} className="px-4 py-2 bg-gradient-to-r from-violet-600 to-purple-500 text-white text-sm font-semibold rounded-xl hover:opacity-90 transition-opacity shadow flex items-center gap-2">
                   <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
-                  Aplicar fechas
+                  Aplicar
                 </button>
                 <button onClick={handleClear} className="px-4 py-2 border border-gray-200 text-gray-600 text-sm font-semibold rounded-xl hover:bg-gray-100 transition-colors bg-white">
                   Limpiar
