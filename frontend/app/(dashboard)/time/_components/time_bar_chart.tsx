@@ -79,9 +79,20 @@ export default function TimeBarChart({ buckets, periodView, onChangePeriod, peri
                 dataKey="label"
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: "#9ca3af", fontSize: 11 }}
-                dy={8}
-                interval={periodView === "daily" ? Math.floor(buckets.length / 8) : 0}
+                tick={
+                  periodView === "weekly"
+                    ? { fill: "#9ca3af", fontSize: 10, textAnchor: "end" }
+                    : { fill: "#9ca3af", fontSize: 11 }
+                }
+                angle={periodView === "weekly" ? -40 : 0}
+                dy={periodView === "weekly" ? 4 : 8}
+                dx={periodView === "weekly" ? -4 : 0}
+                height={periodView === "weekly" ? 52 : 30}
+                interval={
+                  periodView === "daily"   ? Math.max(0, Math.floor(buckets.length / 8)) :
+                  periodView === "weekly"  ? Math.max(0, Math.floor(buckets.length / 10)) :
+                  0
+                }
               />
               <YAxis
                 axisLine={false}
