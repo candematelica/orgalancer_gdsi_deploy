@@ -100,22 +100,24 @@ export default function ProjectsPage() {
       { /* header */}
       <OnboardingBanner />
       <SectionHeader title="Proyectos" subtitle="Gestioná todos tus proyectos freelance" icon={<Briefcase className="w-8 h-8 text-indigo-600" />}>
-        <button
-          onClick={() => setBudgetModalOpen(true)}
-          className="flex items-center space-x-2 px-5 py-3 border border-indigo-200 text-indigo-600 bg-indigo-50 rounded-xl hover:bg-indigo-100 transition-all font-medium text-sm"
-        >
-          <Sparkles className="w-4 h-4" />
-          <span>Generar presupuesto</span>
-        </button>
-        <button
-          onClick={() => setShowForm((prev) => !prev)}
-          className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:shadow-lg hover:scale-[1.02] transition-all font-medium shadow-sm"
-        >
-          {showForm ? (<X className="w-5 h-5" />) : (<Plus className="w-5 h-5" />)}
-          <span>
-            {showForm ? "Cancelar" : "Nuevo Proyecto"}
-          </span>
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => setBudgetModalOpen(true)}
+            className="flex items-center space-x-2 px-5 py-3 border border-indigo-200 text-indigo-600 bg-indigo-50 rounded-xl hover:bg-indigo-100 transition-all font-medium text-sm"
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>Generar presupuesto</span>
+          </button>
+          <button
+            onClick={() => setShowForm((prev) => !prev)}
+            className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:shadow-lg hover:scale-[1.02] transition-all font-medium shadow-sm"
+          >
+            {showForm ? (<X className="w-5 h-5" />) : (<Plus className="w-5 h-5" />)}
+            <span>
+              {showForm ? "Cancelar" : "Nuevo Proyecto"}
+            </span>
+          </button>
+        </div>
       </SectionHeader>
 
 
