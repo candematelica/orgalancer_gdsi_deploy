@@ -1,9 +1,17 @@
 import os
 import asyncio
 import anthropic
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
-from app.schemas.financial_profile import TariffSuggestionRequest
+from sqlalchemy import func
+from sqlalchemy.orm import Session
+
+from app.database import get_db
+from app.routers.auth import get_current_user
+from app.models import User, FinancialConfiguration, Revenue, Expense, TimeEntry, Project, ContractType
+from app.schemas.financial_profile import TariffSuggestionRequest, RateAdjustmentSuggestion, ProjectRateAdjustmentSuggestion
+
+PRICED_CONTRACT_TYPES = (ContractType.fixed_price, ContractType.retainer)
 
 router = APIRouter(prefix="/tariff", tags=["tariff"])
 
@@ -73,9 +81,174 @@ async def _stream_anthropic(prompt: str):
         yield "data: [DONE]\n\n"
 
 
+CONTRACT_TYPE_LABELS = {
+    "fixed_price": "precio fijo",
+    "retainer": "retainer",
+    "hourly": "por hora",
+}
+
+
+def _build_rate_adjustment_prompt(suggestion: RateAdjustmentSuggestion, project: ProjectRateAdjustmentSuggestion, user: User) -> str:
+    level_key = user.years_of_experience or "1-3"
+    multiplier = LEVEL_MULTIPLIERS.get(level_key, 1.5)
+    level = LEVEL_LABELS.get(level_key, "Mid")
+    market_rate = round(project.suggested_hourly_rate * multiplier, 2)
+    gap = round(project.suggested_hourly_rate - suggestion.current_hourly_rate, 2)
+    contract_label = CONTRACT_TYPE_LABELS.get(project.contract_type, project.contract_type)
+
+    return f"""Eres un asesor financiero experto en carreras freelance.
+Un freelancer cerró un proyecto cuya rentabilidad efectiva quedó por debajo de su umbral configurado y el sistema le sugiere ajustar la tarifa para proyectos similares.
+Dale contexto de mercado para trabajos similares y un análisis conciso, accionable y motivador en español.
+
+## Perfil del freelancer
+- Profesión: {user.profession}
+- Experiencia: {user.years_of_experience or "no especificado"} años → nivel {level}
+- País: {user.country or "no especificado"}
+- Moneda: {suggestion.currency}
+
+## Proyecto analizado
+- Nombre: {project.project_name}
+- Modalidad de contratación: {contract_label}
+- Horas trabajadas: {project.total_hours:.1f} h
+- Tarifa efectiva real (ingresos - gastos del proyecto / horas trabajadas): {suggestion.currency} {project.effective_hourly_rate:.2f}/hora
+
+## Datos de referencia
+- Tarifa actual configurada: {suggestion.currency} {suggestion.current_hourly_rate:.2f}/hora
+- Margen mínimo configurado: {suggestion.threshold_margin_pct:.0f}%
+- Tarifa sugerida para proyectos similares de {contract_label}: {suggestion.currency} {project.suggested_hourly_rate:.2f}/hora
+
+## Referencia de mercado
+- Tarifa de mercado estimada para nivel {level} en {user.profession} ({multiplier}x sobre la tarifa sugerida): {suggestion.currency} {market_rate:.2f}/hora
+
+## Tu tarea
+Redactá un análisis de 3 párrafos breves que incluya:
+1. Por qué la rentabilidad de "{project.project_name}" quedó por debajo del umbral y qué significa el ajuste sugerido de {suggestion.currency} {gap:.2f}/hora para próximos proyectos similares
+2. Cómo se compara la tarifa sugerida con lo que cobran freelancers de nivel {level} en trabajos similares de {user.profession}
+3. Una recomendación concreta para cotizar proyectos de {contract_label} de este tipo a futuro
+
+Sé directo, usa números concretos y tutea al freelancer."""
+
+
+def _compute_rate_adjustment(db: Session, user: User) -> RateAdjustmentSuggestion:
+    config = db.query(FinancialConfiguration).filter(
+        FinancialConfiguration.user_id == user.id
+    ).first()
+
+    if not config or not config.hourly_rate:
+        return RateAdjustmentSuggestion(
+            has_suggestion=False,
+            current_hourly_rate=0,
+            threshold_margin_pct=0,
+            currency="USD",
+            reason="Configurá tu tarifa por hora y margen de ganancia para recibir sugerencias.",
+        )
+
+    hourly_rate = config.hourly_rate
+    threshold = config.profit_margin or 0
+    min_acceptable_rate = hourly_rate * (1 - threshold / 100)
+
+    # Rentabilidad por proyecto: en proyectos de precio fijo o retainer, el valor
+    # acordado no cambia con las horas, por lo que la tarifa efectiva
+    # (ingresos - gastos) / horas revela si el precio quedó por debajo de lo necesario.
+    # En proyectos por hora la tarifa efectiva ya está atada al acuerdo, así que no
+    # aportan señal para esta sugerencia.
+    projects: list[ProjectRateAdjustmentSuggestion] = []
+
+    for proj in db.query(Project).filter(
+        Project.user_id == user.id,
+        Project.contract_type.in_(PRICED_CONTRACT_TYPES),
+    ).all():
+        total_minutes = float(db.query(func.sum(TimeEntry.duration_minutes)).filter(TimeEntry.project_id == proj.id).scalar() or 0)
+        hours = total_minutes / 60.0
+        if hours <= 0:
+            continue
+
+        income = float(db.query(func.sum(Revenue.amount)).filter(Revenue.project_id == proj.id).scalar() or 0)
+        expenses = float(db.query(func.sum(Expense.amount)).filter(Expense.project_id == proj.id).scalar() or 0)
+        effective_rate = (income - expenses) / hours
+
+        below = effective_rate < min_acceptable_rate
+        suggested_rate = round(hourly_rate + (min_acceptable_rate - effective_rate), 2) if below else None
+
+        projects.append(ProjectRateAdjustmentSuggestion(
+            project_id=proj.id,
+            project_name=proj.name,
+            contract_type=proj.contract_type.value,
+            effective_hourly_rate=round(effective_rate, 2),
+            total_hours=round(hours, 2),
+            has_suggestion=below,
+            suggested_hourly_rate=suggested_rate,
+        ))
+
+    if not projects:
+        return RateAdjustmentSuggestion(
+            has_suggestion=False,
+            current_hourly_rate=hourly_rate,
+            min_acceptable_rate=round(min_acceptable_rate, 2),
+            threshold_margin_pct=threshold,
+            currency=config.coin_type,
+            reason="Necesitás proyectos de precio fijo o retainer con horas registradas para evaluar si tu tarifa está desactualizada.",
+        )
+
+    has_any = any(p.has_suggestion for p in projects)
+    return RateAdjustmentSuggestion(
+        has_suggestion=has_any,
+        current_hourly_rate=hourly_rate,
+        min_acceptable_rate=round(min_acceptable_rate, 2),
+        threshold_margin_pct=threshold,
+        currency=config.coin_type,
+        reason="Algunos de tus proyectos de precio fijo/retainer tuvieron una rentabilidad por debajo del margen configurado." if has_any else None,
+        projects=projects,
+    )
+
+
+async def _stream_no_suggestion_message():
+    message = "Tu tarifa actual está alineada con tu rentabilidad esperada, no necesitás ajustarla por el momento."
+    yield f"data: {message}\n\n"
+    yield "data: [DONE]\n\n"
+
+
 @router.post("/suggest")
 async def suggest_tariff(req: TariffSuggestionRequest):
     prompt = _build_prompt(req)
+    return StreamingResponse(
+        _stream_anthropic(prompt),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+@router.get("/rate-adjustment", response_model=RateAdjustmentSuggestion)
+def get_rate_adjustment_suggestion(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return _compute_rate_adjustment(db, current_user)
+
+
+@router.post("/rate-adjustment/insight/{project_id}")
+async def get_rate_adjustment_insight(
+    project_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    suggestion = _compute_rate_adjustment(db, current_user)
+    project = next((p for p in suggestion.projects if p.project_id == project_id), None)
+
+    if not project or not project.has_suggestion or project.suggested_hourly_rate is None:
+        return StreamingResponse(
+            _stream_no_suggestion_message(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "X-Accel-Buffering": "no",
+            },
+        )
+
+    prompt = _build_rate_adjustment_prompt(suggestion, project, current_user)
     return StreamingResponse(
         _stream_anthropic(prompt),
         media_type="text/event-stream",

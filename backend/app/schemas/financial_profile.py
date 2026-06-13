@@ -65,3 +65,23 @@ class TariffSuggestionRequest(BaseModel):
     profession: str
     years_of_experience: Optional[str] = "1-3"
     country: Optional[str] = None
+
+
+class ProjectRateAdjustmentSuggestion(BaseModel):
+    project_id: str
+    project_name: str
+    contract_type: str
+    effective_hourly_rate: float
+    total_hours: float
+    has_suggestion: bool
+    suggested_hourly_rate: Optional[float] = None
+
+
+class RateAdjustmentSuggestion(BaseModel):
+    has_suggestion: bool
+    current_hourly_rate: float
+    min_acceptable_rate: Optional[float] = None
+    threshold_margin_pct: float
+    currency: str
+    reason: Optional[str] = None
+    projects: list[ProjectRateAdjustmentSuggestion] = []
