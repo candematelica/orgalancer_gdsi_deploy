@@ -7,6 +7,7 @@ import SectionHeader from "./../_components/section_header"
 import { Users } from "lucide-react"
 import OnboardingStepHint from "../_components/onboarding_step_hint";
 import OnboardingBanner from "../_components/onboarding_banner";
+import { getCurrency } from "@/app/_hooks/get_currency";
 
 type Client = {
   id: string;
@@ -34,6 +35,8 @@ export default function ClientsPage() {
   const [clientToEdit, setClientToEdit] = useState<Client | null>(null);
   const [deleteModal, setDeleteModal] = useState<DeleteModalState>({ type: "none" });
   const [deleting, setDeleting] = useState(false);
+  const [clientStats, setClientStats] = useState<Record<string, { activeProjects: number; totalRevenue: number }>>({});
+  const currencySymbol = getCurrency();
 
   const fetchClients = async () => {
     try {
@@ -43,13 +46,41 @@ export default function ClientsPage() {
         return;
       }
       const data = await res.json();
-      if (res.ok) setClients(data);
+      if (res.ok) {
+        setClients(data);
+        fetchClientStats(data);
+      }
     } catch (error) {
       console.error("Error cargando clientes", error);
     } finally {
       setLoading(false);
     }
   };
+
+  const fetchClientStats = useCallback(async (clientList: Client[]) => {
+    const stats: Record<string, { activeProjects: number; totalRevenue: number }> = {};
+    await Promise.all(
+      clientList.map(async (client) => {
+        try {
+          const [projRes, revRes] = await Promise.all([
+            fetch(`/api/projects?client_id=${client.id}&state=active`),
+            fetch(`/api/revenue?client_id=${client.id}`),
+          ]);
+          const projects = projRes.ok ? await projRes.json() : [];
+          const revenues = revRes.ok ? await revRes.json() : [];
+          stats[client.id] = {
+            activeProjects: Array.isArray(projects) ? projects.length : 0,
+            totalRevenue: Array.isArray(revenues)
+              ? revenues.reduce((sum: number, r: { amount: number }) => sum + Number(r.amount), 0)
+              : 0,
+          };
+        } catch {
+          stats[client.id] = { activeProjects: 0, totalRevenue: 0 };
+        }
+      })
+    );
+    setClientStats(stats);
+  }, []);
 
   useEffect(() => {
     fetchClients();
@@ -254,11 +285,13 @@ export default function ClientsPage() {
                   </td>
                   <td className="px-6 py-4">
                     <span className="inline-block bg-blue-100 text-blue-700 text-xs font-medium px-3 py-1 rounded-full">
-                      0 proyectos
+                      {clientStats[client.id]?.activeProjects ?? 0} {(clientStats[client.id]?.activeProjects ?? 0) === 1 ? "proyecto" : "proyectos"}
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="text-sm font-semibold text-gray-800">$0</span>
+                    <span className="text-sm font-semibold text-gray-800">
+                      {currencySymbol}{(clientStats[client.id]?.totalRevenue ?? 0).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-4">
