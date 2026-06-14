@@ -6,8 +6,10 @@ export interface ProjectRateAdjustmentSuggestion {
   project_id: string;
   project_name: string;
   contract_type: string;
-  effective_hourly_rate: number;
   total_hours: number;
+  actual_income: number;
+  potential_income: number;
+  effective_hourly_rate: number;
   has_suggestion: boolean;
   suggested_hourly_rate?: number | null;
 }

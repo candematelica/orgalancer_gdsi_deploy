@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.routers.auth import get_current_user
-from app.models import User, FinancialConfiguration, Revenue, Expense, TimeEntry, Project, ContractType
+from app.models import User, FinancialConfiguration, Revenue, TimeEntry, Project, ContractType, ProjectState
 from app.schemas.financial_profile import TariffSuggestionRequest, RateAdjustmentSuggestion, ProjectRateAdjustmentSuggestion
 
 PRICED_CONTRACT_TYPES = (ContractType.fixed_price, ContractType.retainer)
@@ -94,11 +94,12 @@ def _build_rate_adjustment_prompt(suggestion: RateAdjustmentSuggestion, project:
     level = LEVEL_LABELS.get(level_key, "Mid")
     market_rate = round(project.suggested_hourly_rate * multiplier, 2)
     gap = round(project.suggested_hourly_rate - suggestion.current_hourly_rate, 2)
+    income_gap = round(project.potential_income - project.actual_income, 2)
     contract_label = CONTRACT_TYPE_LABELS.get(project.contract_type, project.contract_type)
 
     return f"""Eres un asesor financiero experto en carreras freelance.
-Un freelancer cerró un proyecto cuya rentabilidad efectiva quedó por debajo de su umbral configurado y el sistema le sugiere ajustar la tarifa para proyectos similares.
-Dale contexto de mercado para trabajos similares y un análisis conciso, accionable y motivador en español.
+Un freelancer cerró un proyecto que, cobrado a su tarifa horaria actual, habría sido más rentable de lo que terminó siendo.
+El sistema le sugiere ajustar la tarifa para proyectos similares. Dale contexto de mercado para trabajos similares y un análisis conciso, accionable y motivador en español.
 
 ## Perfil del freelancer
 - Profesión: {user.profession}
@@ -110,7 +111,10 @@ Dale contexto de mercado para trabajos similares y un análisis conciso, acciona
 - Nombre: {project.project_name}
 - Modalidad de contratación: {contract_label}
 - Horas trabajadas: {project.total_hours:.1f} h
-- Tarifa efectiva real (ingresos - gastos del proyecto / horas trabajadas): {suggestion.currency} {project.effective_hourly_rate:.2f}/hora
+- Lo presupuestado/cobrado: {suggestion.currency} {project.actual_income:.2f}
+- Lo que hubiera facturado a tu tarifa actual ({project.total_hours:.1f}h × {suggestion.currency} {suggestion.current_hourly_rate:.2f}/hora): {suggestion.currency} {project.potential_income:.2f}
+- Diferencia: {suggestion.currency} {income_gap:.2f} menos de lo que podrías haber facturado
+- Tarifa efectiva real (presupuestado/cobrado / horas trabajadas): {suggestion.currency} {project.effective_hourly_rate:.2f}/hora
 
 ## Datos de referencia
 - Tarifa actual configurada: {suggestion.currency} {suggestion.current_hourly_rate:.2f}/hora
@@ -122,7 +126,7 @@ Dale contexto de mercado para trabajos similares y un análisis conciso, acciona
 
 ## Tu tarea
 Redactá un análisis de 3 párrafos breves que incluya:
-1. Por qué la rentabilidad de "{project.project_name}" quedó por debajo del umbral y qué significa el ajuste sugerido de {suggestion.currency} {gap:.2f}/hora para próximos proyectos similares
+1. Qué significa haber dejado {suggestion.currency} {income_gap:.2f} sobre la mesa en "{project.project_name}", y por qué cotizar por {suggestion.currency} {gap:.2f}/hora más en proyectos similares evitaría esto
 2. Cómo se compara la tarifa sugerida con lo que cobran freelancers de nivel {level} en trabajos similares de {user.profession}
 3. Una recomendación concreta para cotizar proyectos de {contract_label} de este tipo a futuro
 
@@ -147,15 +151,17 @@ def _compute_rate_adjustment(db: Session, user: User) -> RateAdjustmentSuggestio
     threshold = config.profit_margin or 0
     min_acceptable_rate = hourly_rate * (1 - threshold / 100)
 
-    # Rentabilidad por proyecto: en proyectos de precio fijo o retainer, el valor
-    # acordado no cambia con las horas, por lo que la tarifa efectiva
-    # (ingresos - gastos) / horas revela si el precio quedó por debajo de lo necesario.
-    # En proyectos por hora la tarifa efectiva ya está atada al acuerdo, así que no
-    # aportan señal para esta sugerencia.
+    # Por cada proyecto finalizado de precio fijo o retainer, estimamos cuánto se
+    # habría facturado cobrando las horas trabajadas a la tarifa actual
+    # (potential_income) y lo comparamos contra lo presupuestado o cobrado
+    # finalmente (actual_income). Si lo cobrado quedó por debajo del margen
+    # configurado sobre lo que se podría haber facturado, el proyecto pudo haber
+    # sido más rentable.
     projects: list[ProjectRateAdjustmentSuggestion] = []
 
     for proj in db.query(Project).filter(
         Project.user_id == user.id,
+        Project.state == ProjectState.completed,
         Project.contract_type.in_(PRICED_CONTRACT_TYPES),
     ).all():
         total_minutes = float(db.query(func.sum(TimeEntry.duration_minutes)).filter(TimeEntry.project_id == proj.id).scalar() or 0)
@@ -163,9 +169,13 @@ def _compute_rate_adjustment(db: Session, user: User) -> RateAdjustmentSuggestio
         if hours <= 0:
             continue
 
-        income = float(db.query(func.sum(Revenue.amount)).filter(Revenue.project_id == proj.id).scalar() or 0)
-        expenses = float(db.query(func.sum(Expense.amount)).filter(Expense.project_id == proj.id).scalar() or 0)
-        effective_rate = (income - expenses) / hours
+        total_income = float(db.query(func.sum(Revenue.amount)).filter(Revenue.project_id == proj.id).scalar() or 0)
+        actual_income = total_income if total_income > 0 else float(proj.estimated_budget or 0)
+        if actual_income <= 0:
+            continue
+
+        potential_income = hours * hourly_rate
+        effective_rate = actual_income / hours
 
         below = effective_rate < min_acceptable_rate
         suggested_rate = round(hourly_rate + (min_acceptable_rate - effective_rate), 2) if below else None
@@ -174,8 +184,10 @@ def _compute_rate_adjustment(db: Session, user: User) -> RateAdjustmentSuggestio
             project_id=proj.id,
             project_name=proj.name,
             contract_type=proj.contract_type.value,
-            effective_hourly_rate=round(effective_rate, 2),
             total_hours=round(hours, 2),
+            actual_income=round(actual_income, 2),
+            potential_income=round(potential_income, 2),
+            effective_hourly_rate=round(effective_rate, 2),
             has_suggestion=below,
             suggested_hourly_rate=suggested_rate,
         ))
@@ -187,7 +199,7 @@ def _compute_rate_adjustment(db: Session, user: User) -> RateAdjustmentSuggestio
             min_acceptable_rate=round(min_acceptable_rate, 2),
             threshold_margin_pct=threshold,
             currency=config.coin_type,
-            reason="Necesitás proyectos de precio fijo o retainer con horas registradas para evaluar si tu tarifa está desactualizada.",
+            reason="Necesitás proyectos finalizados de precio fijo o retainer con horas e ingresos registrados para evaluar si tu tarifa está desactualizada.",
         )
 
     has_any = any(p.has_suggestion for p in projects)

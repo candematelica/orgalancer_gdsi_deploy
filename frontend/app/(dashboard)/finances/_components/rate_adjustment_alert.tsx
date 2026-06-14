@@ -38,11 +38,12 @@ export default function RateAdjustmentAlert() {
               <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
               <div className="text-sm text-amber-800">
                 <p>
-                  <span className="font-semibold">&quot;{project.project_name}&quot;</span> ({contractLabel}) tuvo
-                  una tarifa efectiva de{" "}
-                  <span className="font-semibold">{sym}{project.effective_hourly_rate}/hora</span>{" "}
-                  en {project.total_hours}h trabajadas, por debajo del margen mínimo del{" "}
-                  {suggestion.threshold_margin_pct}% sobre tu tarifa de {sym}{suggestion.current_hourly_rate}/hora.
+                  <span className="font-semibold">&quot;{project.project_name}&quot;</span> ({contractLabel}) te
+                  dejó {sym}{project.actual_income} por {project.total_hours}h trabajadas (
+                  <span className="font-semibold">{sym}{project.effective_hourly_rate}/hora</span> efectivo).
+                  A tu tarifa actual de {sym}{suggestion.current_hourly_rate}/hora hubieras facturado{" "}
+                  <span className="font-semibold">{sym}{project.potential_income}</span>: pudo haber sido más
+                  rentable, quedando por debajo del margen mínimo del {suggestion.threshold_margin_pct}%.
                 </p>
                 <p className="mt-1">
                   Para próximos proyectos similares te sugerimos cotizar a{" "}

@@ -71,8 +71,10 @@ class ProjectRateAdjustmentSuggestion(BaseModel):
     project_id: str
     project_name: str
     contract_type: str
-    effective_hourly_rate: float
     total_hours: float
+    actual_income: float
+    potential_income: float
+    effective_hourly_rate: float
     has_suggestion: bool
     suggested_hourly_rate: Optional[float] = None
 
