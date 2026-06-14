@@ -6,7 +6,8 @@ import {
   TrendingUp,
   Bot,
   Settings,
-  BarChart3
+  BarChart3,
+  Clock,
 } from "lucide-react";
 
 export const NAV_ITEMS = [
@@ -29,6 +30,11 @@ export const NAV_ITEMS = [
     label: "Tareas",
     href: "/tasks",
     icon: <SquareCheck size={18} />,
+  },
+  {
+    label: "Tiempo",
+    href: "/time",
+    icon: <Clock size={18} />,
   },
   {
     label: "Movimientos",
