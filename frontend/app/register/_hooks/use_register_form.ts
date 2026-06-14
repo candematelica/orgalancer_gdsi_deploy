@@ -1,6 +1,8 @@
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export function useRegisterForm() {
+  const router = useRouter();
   const [fields, setFields] = useState({
     full_name: "",
     email: "",
@@ -11,7 +13,6 @@ export function useRegisterForm() {
   const [error, set_error] = useState("");
   const [email_error, set_email_error] = useState("");
   const [loading, set_loading] = useState(false);
-  const [success, set_success] = useState(false);
 
   const handle_change = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFields({ ...fields, [e.target.name]: e.target.value });
@@ -48,7 +49,9 @@ export function useRegisterForm() {
       });
       const data = await res.json();
       if (!res.ok) return set_error(data.error || "Error al registrar");
-      set_success(true);
+
+      localStorage.setItem("user", JSON.stringify(data));
+      router.push("/dashboard");
     } catch {
       set_error("Error de conexión, intentá de nuevo");
     } finally {
@@ -63,7 +66,6 @@ export function useRegisterForm() {
     error,
     email_error,
     loading,
-    success,
     handle_change,
     handle_email_change,
     handle_submit,

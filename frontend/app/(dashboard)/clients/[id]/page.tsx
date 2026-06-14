@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import NewClientModal from "@/app/(dashboard)/_components/new_client_modal";
 import TimeByProjectChart from "./_components/TimeByProjectChart";
+import { getCurrency } from "@/app/_hooks/get_currency";
 
 type Client = {
   id: string;
@@ -41,6 +42,9 @@ export default function ClientDetailPage() {
   const [selectedReceiptId, setSelectedReceiptId] = useState<string>("");
   const [reminderStatus, setReminderStatus] = useState<ReminderStatus>("idle");
   const [reminderError, setReminderError] = useState<string>("");
+  const [activeProjectCount, setActiveProjectCount] = useState<number>(0);
+  const [totalRevenue, setTotalRevenue] = useState<number>(0);
+  const currencySymbol = getCurrency();
 
   const fetchClient = useCallback(async () => {
     try {
@@ -71,10 +75,32 @@ export default function ClientDetailPage() {
     } catch { }
   }, [params.id]);
 
+  const fetchClientStats = useCallback(async () => {
+    try {
+      const [projRes, revRes] = await Promise.all([
+        fetch(`/api/projects?client_id=${params.id}&state=active`),
+        fetch(`/api/revenue?client_id=${params.id}`),
+      ]);
+      if (projRes.ok) {
+        const projects = await projRes.json();
+        setActiveProjectCount(Array.isArray(projects) ? projects.length : 0);
+      }
+      if (revRes.ok) {
+        const revenues = await revRes.json();
+        setTotalRevenue(
+          Array.isArray(revenues)
+            ? revenues.reduce((sum: number, r: { amount: number }) => sum + Number(r.amount), 0)
+            : 0
+        );
+      }
+    } catch { }
+  }, [params.id]);
+
   useEffect(() => {
     fetchClient();
     fetchPendingReceipts();
-  }, [fetchClient, fetchPendingReceipts]);
+    fetchClientStats();
+  }, [fetchClient, fetchPendingReceipts, fetchClientStats]);
 
   const handleSendReminder = async () => {
     if (!selectedReceiptId || reminderStatus === "loading") return;
@@ -237,8 +263,14 @@ export default function ClientDetailPage() {
             </div>
             <h2 className="text-base font-semibold text-blue-500">Proyectos activos</h2>
           </div>
-          <p className="text-3xl font-bold text-gray-800">0</p>
-          <p className="text-xs text-gray-400 mt-1">Sin proyectos por ahora</p>
+          <p className="text-3xl font-bold text-gray-800">{activeProjectCount}</p>
+          <p className="text-xs text-gray-400 mt-1">
+            {activeProjectCount === 0
+              ? "Sin proyectos por ahora"
+              : activeProjectCount === 1
+                ? "Proyecto activo"
+                : "Proyectos activos"}
+          </p>
         </div>
 
         {/* Ingresos */}
@@ -251,8 +283,12 @@ export default function ClientDetailPage() {
             </div>
             <h2 className="text-base font-semibold text-green-500">Ingresos totales</h2>
           </div>
-          <p className="text-3xl font-bold text-green-600">$0</p>
-          <p className="text-xs text-gray-400 mt-1">Se calculará con los proyectos</p>
+          <p className="text-3xl font-bold text-green-600">
+            {currencySymbol}{totalRevenue.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </p>
+          <p className="text-xs text-gray-400 mt-1">
+            {totalRevenue === 0 ? "Se calculará con los proyectos" : "Acumulado total"}
+          </p>
         </div>
 
         {/* Gráfico de tiempo por proyecto */}
