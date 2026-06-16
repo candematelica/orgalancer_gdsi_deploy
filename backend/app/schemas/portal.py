@@ -1,5 +1,5 @@
-from datetime import date
-from typing import List, Optional
+from datetime import date, datetime
+from typing import List, Literal, Optional
 from pydantic import BaseModel
 
 
@@ -18,6 +18,19 @@ class PortalReceiptItem(BaseModel):
     date_emitted: date
     status: str  # "pending" | "paid" | "cancelled"
 
+class PortalBudgetItem(BaseModel):
+    id: str
+    name: str
+    total_amount: float
+    currency: str
+    description: Optional[str] = None
+    status: str  # "pending" | "approved" | "rejected"
+    created_at: datetime
+    responded_at: Optional[datetime] = None
+
+class PortalBudgetRespondRequest(BaseModel):
+    decision: Literal["approved", "rejected"]
+
 class PortalProjectResponse(BaseModel):
     name: str
     description: Optional[str] = None
@@ -28,6 +41,7 @@ class PortalProjectResponse(BaseModel):
     client_name: Optional[str] = None
     tasks: List[PortalTaskItem] = []
     receipts: List[PortalReceiptItem] = []
+    budgets: List[PortalBudgetItem] = []
 
     class Config:
         from_attributes = True

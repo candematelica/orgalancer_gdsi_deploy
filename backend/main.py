@@ -27,6 +27,14 @@ def _migrate_tariff_columns():
         if "payment_method" not in existing2:
             conn.execute(text("ALTER TABLE revenue_entries ADD COLUMN payment_method VARCHAR DEFAULT 'Otro'"))
 
+        # budgets
+        rows3 = conn.execute(text("PRAGMA table_info(budgets)")).fetchall()
+        existing3 = {r[1] for r in rows3}
+        if "status" not in existing3:
+            conn.execute(text("ALTER TABLE budgets ADD COLUMN status VARCHAR DEFAULT 'pending'"))
+        if "responded_at" not in existing3:
+            conn.execute(text("ALTER TABLE budgets ADD COLUMN responded_at DATETIME"))
+
         for col, definition in additions:
             if col not in existing:
                 conn.execute(text(f"ALTER TABLE financial_configurations ADD COLUMN {col} {definition}"))
