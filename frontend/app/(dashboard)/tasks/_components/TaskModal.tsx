@@ -35,7 +35,7 @@ export default function TaskModal({ isOpen, onClose, children }: TaskModalProps)
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-0">
       <div
-        className="fixed inset-0 bg-black/30 backdrop-blur-sm transition-opacity"
+        className="fixed inset-0 bg-black/30 transition-opacity"
         onClick={onClose}
         aria-hidden="true"
       />
