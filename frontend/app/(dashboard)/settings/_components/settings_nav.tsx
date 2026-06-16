@@ -2,14 +2,10 @@
 
 // Settings sidebar navigation. Owns the TABS definition and TabId type.
 
-import { User, Bell, CreditCard, SlidersHorizontal, Shield } from "lucide-react";
+import { User } from "lucide-react";
 
 export const TABS = [
-  { id: "profile",       label: "Perfil",          icon: User },
-  { id: "notifications", label: "Notificaciones",   icon: Bell },
-  { id: "billing",       label: "Facturación",      icon: CreditCard },
-  { id: "preferences",   label: "Preferencias",     icon: SlidersHorizontal },
-  { id: "security",      label: "Seguridad",        icon: Shield },
+  { id: "profile", label: "Perfil", icon: User },
 ] as const;
 
 export type TabId = (typeof TABS)[number]["id"];
