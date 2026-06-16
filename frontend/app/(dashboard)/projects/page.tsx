@@ -16,10 +16,12 @@ import BudgetModal from "./_components/budget_modal";
 import { useTimerContext } from "../_lib/TimerContext";
 import OnboardingStepHint from "../_components/onboarding_step_hint";
 import OnboardingBanner from "../_components/onboarding_banner";
+import { getCurrency } from "@/app/_hooks/get_currency";
 
 export default function ProjectsPage() {
   const router = useRouter();
   const { setTask: setTimerProject, setIsOpen: setTimerOpen } = useTimerContext();
+  const currency = getCurrency();
 
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
@@ -187,7 +189,7 @@ export default function ProjectsPage() {
             </div>
 
             <div>
-              <label className="block text-sm text-gray-800 font-medium text-gray-800 mb-1">Presupuesto estimado (€) *</label>
+              <label className="block text-sm text-gray-800 font-medium text-gray-800 mb-1">Presupuesto estimado ({currency}) *</label>
               <input
                 type="number"
                 required
@@ -226,11 +228,7 @@ export default function ProjectsPage() {
       <StatsHeader
         stats={state.stats}
         loading={state.statsLoading}
-        currency="€"
-      />
-
-      {/* filters */}
-      <ProjectFilters
+        currency={currency}
         activeFilter={state.activeFilter}
         onFilterChange={actions.handleFilterChange}
         viewMode={state.viewMode}
@@ -243,7 +241,7 @@ export default function ProjectsPage() {
         viewMode={state.viewMode}
         loading={state.loading}
         activeFilter={state.activeFilter}
-        currency="€"
+        currency={currency}
         onEdit={(project) => setEditingProject(project)}
         onStateChange={() => { actions.reload(); actions.reloadStats(); }}
         onStartTimer={(project) => {
