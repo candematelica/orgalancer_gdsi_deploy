@@ -259,6 +259,12 @@ class Expense(Base):
     project  = relationship("Project")
 
 
+class BudgetStatus(str, enum.Enum):
+    pending  = "pending"
+    approved = "approved"
+    rejected = "rejected"
+
+
 class Budget(Base):
     __tablename__ = "budgets"
     __table_args__ = {"extend_existing": True}
@@ -272,6 +278,8 @@ class Budget(Base):
     total_amount = Column(Numeric(10, 2), nullable=False)
     currency     = Column(String,         nullable=False)
     description  = Column(String,         nullable=True)
+    status       = Column(SQLEnum(BudgetStatus), nullable=False, default=BudgetStatus.pending)
+    responded_at = Column(DateTime,       nullable=True)
 
     created_at   = Column(DateTime,       nullable=False)
 

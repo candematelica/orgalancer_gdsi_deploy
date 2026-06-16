@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useMemo } from "react";
 import { Bell, X, Check, CheckCheck } from "lucide-react";
 import { useDeadlineNotifications } from "../notifications/_hooks/use_deadline_notifications";
+import { useBudgetNotifications } from "../notifications/_hooks/use_budget_notifications";
 
 export type Notification = {
     id: string;
@@ -94,6 +95,14 @@ function isDeadlineNotif(id: string) {
     return id.startsWith("deadline-task-") || id.startsWith("deadline-project-");
 }
 
+function isBudgetNotif(id: string) {
+    return id.startsWith("budget-");
+}
+
+function isBudgetApproved(id: string) {
+    return id.endsWith("-approved");
+}
+
 export default function NotificationDropdown() {
     const [open, setOpen] = useState(false);
     const [deletedIds, setDeletedIds] = useState<Set<string>>(() => loadSet(LS_DELETED));
@@ -103,12 +112,13 @@ export default function NotificationDropdown() {
     const buttonRef = useRef<HTMLButtonElement>(null);
 
     const deadlineNotifs = useDeadlineNotifications();
+    const budgetNotifs = useBudgetNotifications();
 
     const notifications = useMemo(() => {
-        return deadlineNotifs
+        return [...budgetNotifs, ...deadlineNotifs]
             .filter((n) => !deletedIds.has(n.id))
             .map((n) => readIds.has(n.id) ? { ...n, read: true } : n);
-    }, [deadlineNotifs, deletedIds, readIds]);
+    }, [deadlineNotifs, budgetNotifs, deletedIds, readIds]);
 
     const unreadCount = useMemo(
         () => notifications.filter((n) => !n.read).length,
@@ -228,6 +238,8 @@ export default function NotificationDropdown() {
                         ) : (
                             notifications.map((n) => {
                                 const isDeadline = isDeadlineNotif(n.id);
+                                const isBudget = isBudgetNotif(n.id);
+                                const budgetApproved = isBudget && isBudgetApproved(n.id);
                                 const cfg = typeConfig[n.type];
 
                                 return (
@@ -242,9 +254,17 @@ export default function NotificationDropdown() {
                                         }`}
                                     >
                                         <div className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center mt-0.5 ${
-                                            isDeadline ? "bg-amber-50 text-amber-600" : `${cfg.bg} ${cfg.color}`
+                                            isDeadline
+                                                ? "bg-amber-50 text-amber-600"
+                                                : isBudget
+                                                    ? budgetApproved ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
+                                                    : `${cfg.bg} ${cfg.color}`
                                         }`}>
-                                            {isDeadline ? deadlineIcon : cfg.icon}
+                                            {isDeadline
+                                                ? deadlineIcon
+                                                : isBudget
+                                                    ? (budgetApproved ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />)
+                                                    : cfg.icon}
                                         </div>
 
                                         <div
@@ -268,6 +288,15 @@ export default function NotificationDropdown() {
                                             {isDeadline && (
                                                 <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-100 border border-amber-200 rounded-full px-2 py-0.5">
                                                     Vencimiento próximo
+                                                </span>
+                                            )}
+                                            {isBudget && (
+                                                <span className={`mt-1 inline-flex items-center gap-1 text-[10px] font-semibold rounded-full px-2 py-0.5 border ${
+                                                    budgetApproved
+                                                        ? "text-green-700 bg-green-100 border-green-200"
+                                                        : "text-red-700 bg-red-100 border-red-200"
+                                                }`}>
+                                                    {budgetApproved ? "Aprobado por el cliente" : "Rechazado por el cliente"}
                                                 </span>
                                             )}
                                         </div>
