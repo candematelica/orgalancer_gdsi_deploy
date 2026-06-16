@@ -6,18 +6,27 @@ type ContractType = "hourly" | "fixed_price" | "retainer";
 
 export type UpdateProjectFormData = {
   name: string;
+  description: string;
   contract_type: ContractType;
   estimated_budget: number;
   deadline: string;
 };
 
 export function useUpdateProject(
-  project: { id: string; name: string; contract_type: string; estimated_budget: number; deadline: string | null } | null,
+  project: {
+    id: string;
+    name: string;
+    description: string | null;
+    contract_type: string;
+    estimated_budget: number;
+    deadline: string | null;
+  } | null,
   onSaved: () => void,
   onClose: () => void,
 ) {
   const [formData, setFormData] = useState<UpdateProjectFormData>({
     name: "",
+    description: "",
     contract_type: "fixed_price",
     estimated_budget: 0,
     deadline: "",
@@ -30,6 +39,7 @@ export function useUpdateProject(
     if (project) {
       setFormData({
         name: project.name,
+        description: project.description ?? "",
         contract_type: project.contract_type as ContractType,
         estimated_budget: project.estimated_budget,
         deadline: project.deadline ?? "",
@@ -47,11 +57,10 @@ export function useUpdateProject(
     try {
       const res = await fetch(`/api/projects/${project!.id}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: formData.name,
+          description: formData.description || null,
           contract_type: formData.contract_type,
           estimated_budget: formData.estimated_budget,
           deadline: formData.deadline || null,
