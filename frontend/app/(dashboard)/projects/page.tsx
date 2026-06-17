@@ -16,10 +16,12 @@ import CreateProjectModal from "./_components/create_project_modal";
 import { useTimerContext } from "../_lib/TimerContext";
 import OnboardingStepHint from "../_components/onboarding_step_hint";
 import OnboardingBanner from "../_components/onboarding_banner";
+import { getCurrency } from "@/app/_hooks/get_currency";
 
 export default function ProjectsPage() {
   const router = useRouter();
   const { setTask: setTimerProject, setIsOpen: setTimerOpen } = useTimerContext();
+  const currency = getCurrency();
 
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [editingProject, setEditingProject] = useState<EnrichedProject | null>(null);
@@ -92,7 +94,7 @@ export default function ProjectsPage() {
       <StatsHeader
         stats={state.stats}
         loading={state.statsLoading}
-        currency="€"
+        currency={currency}
       />
 
       <ProjectFilters
@@ -107,7 +109,7 @@ export default function ProjectsPage() {
         viewMode={state.viewMode}
         loading={state.loading}
         activeFilter={state.activeFilter}
-        currency="€"
+        currency={currency}
         onEdit={(project) => setEditingProject(project)}
         onStateChange={() => { actions.reload(); actions.reloadStats(); }}
         onStartTimer={(project) => {

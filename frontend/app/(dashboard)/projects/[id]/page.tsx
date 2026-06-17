@@ -18,6 +18,7 @@ import NotesTab      from "./_components/tabs/notes_tab";
 import ProfitabilityTab from "./_components/tabs/profitability_tab";
 
 import EditProjectPanel from "../_components/edit_project_panel";
+import { getCurrency } from "@/app/_hooks/get_currency";
 
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
