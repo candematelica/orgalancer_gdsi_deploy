@@ -28,6 +28,8 @@ class BudgetResponse(BaseModel):
     total_amount: float
     currency:     str
     description:  Optional[str]
+    status:       str
+    responded_at: Optional[datetime] = None
     created_at:   datetime
 
     project_name: Optional[str] = None

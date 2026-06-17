@@ -225,21 +225,6 @@ class ExpenseCategory(Base):
     user     = relationship("User")
     expenses = relationship("Expense", back_populates="category")
 
-class Budget(Base):
-    __tablename__ = "budgets"
-
-    id          = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    user_id     = Column(String, ForeignKey("users.id"), nullable=False, index=True)
-    project_id  = Column(String, ForeignKey("projects.id"), nullable=True, index=True)
-
-    name        = Column(String, nullable=False)
-    total_amount = Column(Numeric(10, 2), nullable=False)
-    currency    = Column(String, nullable=False)
-    description = Column(String, nullable=True)
-
-    user    = relationship("User")
-    project = relationship("Project")
-
 
 class Expense(Base):
     __tablename__ = "expenses"
@@ -259,6 +244,12 @@ class Expense(Base):
     project  = relationship("Project")
 
 
+class BudgetStatus(str, enum.Enum):
+    pending  = "pending"
+    approved = "approved"
+    rejected = "rejected"
+
+
 class Budget(Base):
     __tablename__ = "budgets"
     __table_args__ = {"extend_existing": True}
@@ -272,6 +263,8 @@ class Budget(Base):
     total_amount = Column(Numeric(10, 2), nullable=False)
     currency     = Column(String,         nullable=False)
     description  = Column(String,         nullable=True)
+    status       = Column(SQLEnum(BudgetStatus), nullable=False, default=BudgetStatus.pending)
+    responded_at = Column(DateTime,       nullable=True)
 
     created_at   = Column(DateTime,       nullable=False)
 

@@ -16,5 +16,5 @@ export default async function PortalPage({ params }: Props) {
 
   const project = await res.json();
 
-  return <PortalClient project={project} freelancerName={""} />;
+  return <PortalClient project={project} freelancerName={""} token={params.token} />;
 }

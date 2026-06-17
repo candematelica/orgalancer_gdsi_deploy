@@ -37,6 +37,7 @@ class ProjectCreate(BaseModel):
 
 class ProjectUpdate(BaseModel):
     name: Optional[str] = None
+    description: Optional[str] = None
     contract_type: Optional[ContractType] = None
     estimated_budget: Optional[float] = None
     deadline: Optional[date] = None

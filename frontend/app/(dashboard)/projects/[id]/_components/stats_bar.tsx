@@ -11,9 +11,10 @@ const STATE_MAP: Record<
 
 interface Props {
   project: ProjectDetail;
+  currency?: string;
 }
 
-export default function StatsBar({ project }: Props) {
+export default function StatsBar({ project, currency = "$" }: Props) {
   const state = STATE_MAP[project.state];
 
   return (
@@ -32,13 +33,13 @@ export default function StatsBar({ project }: Props) {
 
       <StatCard label="Presupuesto">
         <p className="text-2xl font-bold text-gray-800">
-          €{project.estimated_budget.toLocaleString("es-ES")}
+          {currency}{project.estimated_budget.toLocaleString("es-ES")}
         </p>
       </StatCard>
 
       <StatCard label="Ganado">
         <p className="text-2xl font-bold text-green-600">
-          €{project.earned.toLocaleString("es-ES")}
+          {currency}{project.earned.toLocaleString("es-ES")}
         </p>
       </StatCard>
     </div>
