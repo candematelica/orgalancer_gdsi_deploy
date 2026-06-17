@@ -4,13 +4,10 @@
 
 import { useRef, useState } from "react";
 import { Camera, Loader2 } from "lucide-react";
-import { API_BASE } from "../_lib/api";
 
 const getFullUrl = (path: string | null | undefined) => {
   if (!path) return null;
-  const base = API_BASE.replace(/\/$/, "");
-  const cleanPath = path.replace(/^\//, "");
-  return `${base}/${cleanPath}`;
+  return `/api/static/${path.replace(/^\//, "")}`;
 };
 
 function getInitials(name: string): string {
