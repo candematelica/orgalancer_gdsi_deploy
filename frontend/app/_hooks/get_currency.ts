@@ -11,11 +11,7 @@ export function getCurrency(): string {
   const [currency, setCurrency] = useState("$");
 
   useEffect(() => {
-    const raw = localStorage.getItem("user");
-    if (!raw) return;
-    const user = JSON.parse(raw) as { id: string };
-    const api = process.env.NEXT_PUBLIC_API_URL;
-    fetch(`${api}/finances/${user.id}`)
+    fetch("/api/finances")
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data?.coin_type) {
