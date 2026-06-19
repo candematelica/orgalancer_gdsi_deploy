@@ -4,10 +4,11 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from app.routers import auth, user_profile, financial_profile, clients, tasks, projects, revenue, receipts, tags, time_entries, reminders, expenses, portal, reports
 from app.routers.tariff_suggestion import router as tariff_router
+from app.routers.project_notes import router as project_notes_router
 from app.database import engine, Base
 import app.models
 import os
-from app.routers import budget  
+from app.routers import budget
 
 
 Base.metadata.create_all(bind=engine)
@@ -34,6 +35,20 @@ def _migrate_tariff_columns():
             conn.execute(text("ALTER TABLE budgets ADD COLUMN status VARCHAR DEFAULT 'pending'"))
         if "responded_at" not in existing3:
             conn.execute(text("ALTER TABLE budgets ADD COLUMN responded_at DATETIME"))
+
+        # project_notes (created via create_all, migration only needed if table was created before this column)
+        rows4 = conn.execute(text("SELECT name FROM sqlite_master WHERE type='table' AND name='project_notes'")).fetchall()
+        if not rows4:
+            conn.execute(text(
+                "CREATE TABLE IF NOT EXISTS project_notes ("
+                "  id TEXT PRIMARY KEY,"
+                "  user_id TEXT NOT NULL REFERENCES users(id),"
+                "  project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,"
+                "  content TEXT NOT NULL,"
+                "  created_at DATETIME NOT NULL,"
+                "  updated_at DATETIME NOT NULL"
+                ")"
+            ))
 
         for col, definition in additions:
             if col not in existing:
@@ -74,6 +89,7 @@ app.include_router(reminders.router)
 app.include_router(expenses.router)
 app.include_router(portal.router)
 app.include_router(reports.router)
+app.include_router(project_notes_router)
 
 @app.get("/health")
 def health():

@@ -272,6 +272,20 @@ class Budget(Base):
     project = relationship("Project")
     client  = relationship("Client")
  
+class ProjectNote(Base):
+    __tablename__ = "project_notes"
+
+    id         = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id    = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    project_id = Column(String, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
+    content    = Column(String, nullable=False)
+    created_at = Column(DateTime, nullable=False)
+    updated_at = Column(DateTime, nullable=False)
+
+    user    = relationship("User")
+    project = relationship("Project")
+
+
 class ProjectPortalToken(Base):
     __tablename__ = "project_portal_tokens"
     
