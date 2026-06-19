@@ -5,10 +5,13 @@ export async function GET(req: NextRequest) {
   try {
     const token = req.cookies.get("token")?.value;
     const { searchParams } = new URL(req.url);
-    const tagId = searchParams.get("tag_id");
-    const url = tagId
-      ? `${process.env.API_URL}/tasks/?tag_id=${tagId}`
-      : `${process.env.API_URL}/tasks/`;
+    const tagId     = searchParams.get("tag_id");
+    const projectId = searchParams.get("project_id");
+    const params = new URLSearchParams();
+    if (tagId)     params.set("tag_id",     tagId);
+    if (projectId) params.set("project_id", projectId);
+    const qs  = params.toString();
+    const url = `${process.env.API_URL}/tasks/${qs ? `?${qs}` : ""}`;
 
     const response = await fetch(url, {
       headers: {

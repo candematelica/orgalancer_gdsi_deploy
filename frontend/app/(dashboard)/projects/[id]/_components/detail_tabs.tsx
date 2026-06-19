@@ -1,6 +1,6 @@
 "use client";
 
-export type DetailTab = "overview" | "budgets" | "tasks" | "documents" | "receipts" | "notes" | "tiempos" | "rentabilidad";
+export type DetailTab = "overview" | "budgets" | "tasks" | "receipts" | "notes" | "tiempos" | "rentabilidad";
 
 interface TabConfig {
   key:    DetailTab;
@@ -20,7 +20,6 @@ export default function DetailTabs({ activeTab, onChange, taskCount, receiptCoun
     { key: "overview",  label: "Vista General" },
     { key: "budgets",   label: "Presupuestos"  },
     { key: "tasks",     label: "Tareas",    count: taskCount     },
-    { key: "documents", label: "Documentos"                      },
     { key: "receipts",  label: "Recibos",   count: receiptCount  },
     { key: "notes",     label: "Notas"                           },
     { key: "tiempos",   label: "Tiempos"                         },

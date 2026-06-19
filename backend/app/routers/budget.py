@@ -114,10 +114,14 @@ def save_budget(
 
 @router.get("", response_model=list[BudgetResponse])
 def list_budgets(
+    project_id: str | None = None,
     db: Session = Depends(get_db),
     user = Depends(get_current_user),
 ):
-    budgets = db.query(Budget).filter(Budget.user_id == user.id).order_by(Budget.created_at.desc()).all()
+    query = db.query(Budget).filter(Budget.user_id == user.id)
+    if project_id:
+        query = query.filter(Budget.project_id == project_id)
+    budgets = query.order_by(Budget.created_at.desc()).all()
     return [
         BudgetResponse(
             id           = b.id,

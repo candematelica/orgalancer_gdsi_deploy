@@ -25,8 +25,12 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   try {
     const token = req.cookies.get("token")?.value;
+    const projectId = new URL(req.url).searchParams.get("project_id");
+    const url = projectId
+      ? `${process.env.API_URL}/budget?project_id=${projectId}`
+      : `${process.env.API_URL}/budget`;
 
-    const res = await fetch(`${process.env.API_URL}/budget`, {
+    const res = await fetch(url, {
       headers: { Authorization: token ? `Bearer ${token}` : "" },
       cache: "no-store",
     });
