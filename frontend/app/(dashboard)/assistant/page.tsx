@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { Award, ChevronRight, Settings } from "lucide-react";
 import Link from "next/link";
 
+import SectionHeader from "./../_components/section_header";
+
 /* ── Types ── */
 interface FinancialConfig {
   coin_type: string;
@@ -197,20 +199,17 @@ export default function AssistantPage() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-extrabold bg-gradient-to-r from-violet-600 to-purple-500 bg-clip-text text-transparent">
-            ✦ Asistente de Tarifas IA
-          </h1>
-          <p className="text-gray-400 text-xs mt-0.5">
-            Análisis inteligente basado en tu perfil y experiencia
-          </p>
-        </div>
-        <span className="flex items-center gap-2 bg-green-50 text-green-700 px-4 py-2 rounded-full text-xs font-medium border border-green-200">
+      <SectionHeader
+        title="Asistente de Tarifas IA"
+        subtitle="Análisis inteligente basado en tu perfil y experiencia"
+        icon={<Award className="w-8 h-8 text-violet-600" />}
+      >
+        <span className="flex items-center gap-2 bg-green-50 text-green-700 px-4 
+          py-2 rounded-full text-xs font-medium border border-green-200">
           <span className="w-2 h-2 bg-green-500 rounded-full" />
           Datos cargados desde tu perfil
         </span>
-      </div>
+      </SectionHeader>
 
       {/* Welcome banner */}
       <div className="bg-blue-50 rounded-3xl p-5 border border-blue-100 flex items-start gap-5">
