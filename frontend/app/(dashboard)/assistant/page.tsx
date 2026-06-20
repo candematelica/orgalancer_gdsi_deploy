@@ -195,7 +195,7 @@ export default function AssistantPage() {
   const a = analyze(financial, profile!);
 
   return (
-    <div className="space-y-5" style={{ fontFamily: "'Inter', sans-serif" }}>
+    <div className="space-y-5">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
