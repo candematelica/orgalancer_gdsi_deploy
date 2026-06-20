@@ -71,13 +71,32 @@ export default function TasksTab({ projectId, onTaskChange }: Props) {
   };
 
   const handleStatusChange = async (task: Task, nextStatus: string) => {
+    const prevStatus = task.status;
+
     setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: nextStatus } : t));
-    await fetch(`/api/tasks/${task.id}/status`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: nextStatus }),
-    });
-    onTaskChange();
+
+    try {
+      const res = await fetch(`/api/tasks/${task.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: nextStatus }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        console.error("Error al actualizar estado:", res.status, data);
+        // rollback
+        setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: prevStatus } : t));
+        showToast(data?.error ?? "No se pudo actualizar el estado");
+        return;
+      }
+
+      onTaskChange();
+    } catch (err) {
+      console.error("Error de red al actualizar estado:", err);
+      setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: prevStatus } : t));
+      showToast("Error de conexión al actualizar el estado");
+    }
   };
 
   const handleDelete = async (taskId: string) => {
