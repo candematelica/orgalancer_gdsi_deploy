@@ -76,7 +76,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
 
     const [settingsRes, financesRes, clientsRes, projectsRes] = await Promise.allSettled([
       fetch("/api/settings"),
-      userId ? fetch(`${API_BASE}/finances/${userId}`) : Promise.reject(),
+      fetch("/api/finances"),
       fetch("/api/clients"),
       fetch("/api/projects"),
     ]);

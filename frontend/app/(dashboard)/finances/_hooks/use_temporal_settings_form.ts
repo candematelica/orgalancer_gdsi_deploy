@@ -32,7 +32,7 @@ export function useFinancialForm() {
   useEffect(() => {
     if (!user) return;
 
-    fetch(`${API_BASE}/finances/${user.id}`)
+    fetch(`/api/finances`)
       .then(res => res.json())
       .then(data => {
         setFormData(prev => ({ ...prev, ...data }));
