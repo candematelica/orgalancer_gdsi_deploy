@@ -173,11 +173,9 @@ export default function AssistantPage() {
     const raw = localStorage.getItem("user");
     if (!raw) return;
     const user = JSON.parse(raw) as { id: string };
-    const api = process.env.NEXT_PUBLIC_API_URL;
-
     Promise.all([
-      fetch(`${api}/users/me/${user.id}`).then((r) => r.json()),
-      fetch(`${api}/finances/${user.id}`).then((r) => (r.ok ? r.json() : null)),
+      fetch(`/api/settings`).then((r) => r.json()),
+      fetch(`/api/finances`).then((r) => (r.ok ? r.json() : null)),
     ])
       .then(([prof, fin]) => {
         setProfile(prof);

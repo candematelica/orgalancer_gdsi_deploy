@@ -179,8 +179,7 @@ export default function BudgetPage() {
     const user = JSON.parse(userRaw);
     if (user.profession) setProfession(user.profession);
 
-    const api = process.env.NEXT_PUBLIC_API_URL;
-    fetch(`${api}/finances/${user.id}`)
+    fetch(`/api/finances`)
       .then((r) => r.ok ? r.json() : null)
       .then((data: UserFinancial | null) => {
         if (data?.hourly_rate) setHourlyRate(data.hourly_rate);
