@@ -1,14 +1,13 @@
 import { notFound } from "next/navigation";
 import PortalClient from "./_components/portal_client";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
-
 interface Props {
-  params: { token: string };
+  params: Promise<{ token: string }>;
 }
 
 export default async function PortalPage({ params }: Props) {
-  const res = await fetch(`${API_URL}/portal/${params.token}`, {
+  const { token } = await params;
+  const res = await fetch(`${process.env.API_URL}/portal/${token}`, {
     cache: "no-store",
   });
 
@@ -16,5 +15,5 @@ export default async function PortalPage({ params }: Props) {
 
   const project = await res.json();
 
-  return <PortalClient project={project} freelancerName={""} token={params.token} />;
+  return <PortalClient project={project} freelancerName={""} token={token} />;
 }
