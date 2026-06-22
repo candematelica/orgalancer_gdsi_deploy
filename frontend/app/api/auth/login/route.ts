@@ -10,11 +10,13 @@ export async function POST(req: NextRequest) {
     body: JSON.stringify(apiBody),
   });
 
-  const data = await response.json();
+  const text = await response.text();
+  let data: any = {};
+  try { data = JSON.parse(text); } catch { /* plain text error */ }
 
   if (!response.ok) {
     return NextResponse.json(
-      { error: data.detail || "Error al iniciar sesión" },
+      { error: data.detail || text || "Error al iniciar sesión" },
       { status: response.status }
     );
   }
