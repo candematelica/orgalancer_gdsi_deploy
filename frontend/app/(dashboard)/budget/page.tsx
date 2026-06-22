@@ -324,13 +324,11 @@ export default function BudgetPage() {
     setError(null);
     setStreaming(true);
 
-    const token = localStorage.getItem("token");
     try {
       const res = await fetch("/api/budget", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           description: description.trim(),

@@ -3,13 +3,13 @@ import { NextRequest, NextResponse } from "next/server";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const token = req.headers.get("Authorization");
+    const token = req.cookies.get("token")?.value;
 
     const res = await fetch(`${process.env.API_URL}/budget/generate`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: token || "",
+        Authorization: token ? `Bearer ${token}` : "",
       },
       body: JSON.stringify(body),
     });
