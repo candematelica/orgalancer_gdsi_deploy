@@ -55,7 +55,9 @@ def _migrate_tariff_columns():
                 conn.execute(text(f"ALTER TABLE financial_configurations ADD COLUMN {col} {definition}"))
         conn.commit()
 
-_migrate_tariff_columns()
+from app.database import DATABASE_URL as _DB_URL
+if _DB_URL.startswith("sqlite"):
+    _migrate_tariff_columns()
 
 if not os.path.exists("static/avatars"):
     os.makedirs("static/avatars", exist_ok=True)
