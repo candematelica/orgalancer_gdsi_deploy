@@ -3,7 +3,6 @@
 
 import { useEffect, useState } from "react";
 import { getUser } from "../../../_hooks/get_user";
-import { API_BASE } from "../_lib/api";
 import { useOnboardingStep } from "../../_components/use_onboarding_step";
 
 type FinancialConfig = {
@@ -51,7 +50,7 @@ export function useFinancialForm() {
 
   useEffect(() => {
     if (!user) return;
-    fetch(`${API_BASE}/finances/${user?.id}`)
+    fetch(`/api/finances`)
     .then(async (res) => {
       if (res.status === 404) return null;
 
@@ -98,7 +97,7 @@ export function useFinancialForm() {
         }
         setError(null); 
       const response = await fetch(
-        `${API_BASE}/finances/${user?.id}`,
+        `/api/finances`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
