@@ -242,7 +242,50 @@ class Expense(Base):
     user     = relationship("User")
     category = relationship("ExpenseCategory", back_populates="expenses")
     project  = relationship("Project")
+
+
+class BudgetStatus(str, enum.Enum):
+    pending  = "pending"
+    approved = "approved"
+    rejected = "rejected"
+
+
+class Budget(Base):
+    __tablename__ = "budgets"
+    __table_args__ = {"extend_existing": True}
+
+    id           = Column(String,         primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id      = Column(String,         ForeignKey("users.id"),    nullable=False, index=True)
+    project_id   = Column(String,         ForeignKey("projects.id"), nullable=True,  index=True)
+    client_id    = Column(String,         ForeignKey("clients.id"),  nullable=True,  index=True)
+
+    name         = Column(String,         nullable=False)
+    total_amount = Column(Numeric(10, 2), nullable=False)
+    currency     = Column(String,         nullable=False)
+    description  = Column(String,         nullable=True)
+    status       = Column(SQLEnum(BudgetStatus), nullable=False, default=BudgetStatus.pending)
+    responded_at = Column(DateTime,       nullable=True)
+
+    created_at   = Column(DateTime,       nullable=False)
+
+    user    = relationship("User")
+    project = relationship("Project")
+    client  = relationship("Client")
  
+class ProjectNote(Base):
+    __tablename__ = "project_notes"
+
+    id         = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id    = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    project_id = Column(String, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
+    content    = Column(String, nullable=False)
+    created_at = Column(DateTime, nullable=False)
+    updated_at = Column(DateTime, nullable=False)
+
+    user    = relationship("User")
+    project = relationship("Project")
+
+
 class ProjectPortalToken(Base):
     __tablename__ = "project_portal_tokens"
     

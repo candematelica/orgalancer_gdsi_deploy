@@ -6,6 +6,36 @@ import Sidebar from "./_components/sidebar";
 import TopNavbar from "./_components/top_navbar";
 import { TimerProvider } from "./_lib/TimerContext";
 import FloatingTimerWidgetGlobal from "./_components/FloatingTimerWidgetGlobal";
+import { OnboardingProvider, useOnboarding } from "./_components/onboarding_context";
+import OnboardingModal from "./_components/onboarding_modal";
+
+function DashboardContent({ children }: { children: React.ReactNode }) {
+  const { state, allDone } = useOnboarding();
+  const [showModal, setShowModal] = useState(false);
+
+  useEffect(() => {
+    // Mostrar el modal solo si: ya chequeó, hay pasos pendientes, no lo omitió
+    if (state.checked && !allDone && !state.skipped) {
+      setShowModal(true);
+    }
+  }, [state.checked, allDone, state.skipped]);
+
+  return (
+    <div className="flex h-screen overflow-hidden bg-white">
+      <Sidebar />
+      <div className="flex flex-col flex-1 overflow-hidden">
+        <TopNavbar />
+        <main className="flex-1 overflow-y-auto p-8">
+          {children}
+        </main>
+      </div>
+      <FloatingTimerWidgetGlobal />
+      {showModal && (
+        <OnboardingModal onClose={() => setShowModal(false)} />
+      )}
+    </div>
+  );
+}
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -24,16 +54,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <TimerProvider>
-      <div className="flex h-screen overflow-hidden bg-white">
-        <Sidebar />
-        <div className="flex flex-col flex-1 overflow-hidden">
-          <TopNavbar />
-          <main className="flex-1 overflow-y-auto p-8">
-            {children}
-          </main>
-        </div>
-        <FloatingTimerWidgetGlobal />
-      </div>
+      <OnboardingProvider>
+        <DashboardContent>{children}</DashboardContent>
+      </OnboardingProvider>
     </TimerProvider>
   );
 }

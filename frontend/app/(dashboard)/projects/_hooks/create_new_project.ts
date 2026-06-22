@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useOnboardingStep } from "../../_components/use_onboarding_step";
 
 type ProjectFormData = {
   client_id: string;
   name: string;
+  description: string;
   contract_type: "hourly" | "fixed_price" | "retainer";
   estimated_budget: number | null;
   deadline: Date | null;
@@ -13,6 +15,7 @@ type ProjectFormData = {
 const INITIAL_STATE: ProjectFormData = {
   client_id: "",
   name: "",
+  description: "",
   contract_type: "fixed_price",
   estimated_budget: null,
   deadline: null,
@@ -24,12 +27,12 @@ export function useCreateProjectForm() {
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(false);
   const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
+  const { complete } = useOnboardingStep("project");
 
   useEffect(() => {
     const fetchClients = async () => {
       try {
         const response = await fetch("/api/clients");
-
         if (!response.ok) throw new Error("No se pudieron cargar los clientes");
         const data = await response.json();
         setClients(data);
@@ -54,12 +57,11 @@ export function useCreateProjectForm() {
     try {
       const response = await fetch("/api/projects", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           client_id: formData.client_id,
           name: formData.name,
+          description: formData.description || null,
           contract_type: formData.contract_type,
           estimated_budget: formData.estimated_budget,
           deadline: formData.deadline ? formData.deadline.toISOString().split("T")[0] : null,
@@ -79,6 +81,7 @@ export function useCreateProjectForm() {
       setFormData(INITIAL_STATE);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
+      complete();
       return true;
 
     } catch (err) {

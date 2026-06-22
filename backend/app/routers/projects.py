@@ -3,6 +3,7 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import case
 
 from app.database import get_db
 from app.models import User, Project, Client, ProjectState, TaskStatus
@@ -79,7 +80,7 @@ def get_project_stats(
 @router.get("/", response_model=List[ProjectListItem])
 def list_projects(
         state: Optional[ProjectState] = Query(None),
-        client_id: Optional[str] = Query(None),  # ← agregar
+        client_id: Optional[str] = Query(None),
         db: Session = Depends(get_db),
         current_user: User = Depends(get_current_user),
 ):
@@ -90,10 +91,17 @@ def list_projects(
     )
     if state:
         query = query.filter(Project.state == state)
-    if client_id:                                           # ← agregar
+    if client_id:
         query = query.filter(Project.client_id == client_id)
 
-    return [_to_list_item(p) for p in query.order_by(Project.deadline.asc()).all()]
+    state_order = case(
+        (Project.state == ProjectState.active, 1),
+        (Project.state == ProjectState.completed, 2),
+        (Project.state == ProjectState.cancelled, 3),
+        else_=99
+    )
+
+    return [_to_list_item(p) for p in query.order_by(state_order, Project.deadline.asc().nulls_last()).all()]
 
 @router.get("/{project_id}", response_model=ProjectListItem)
 def get_project(

@@ -15,6 +15,10 @@ import {
     CreditCard,
     CheckCheck,
     Hourglass,
+    FileCheck2,
+    Check,
+    X,
+    Loader2,
 } from "lucide-react";
 
 interface Task {
@@ -31,6 +35,17 @@ interface Receipt {
     status: "paid" | "pending" | "cancelled";
 }
 
+interface Budget {
+    id: string;
+    name: string;
+    total_amount: number;
+    currency: string;
+    description?: string;
+    status: "pending" | "approved" | "rejected";
+    created_at: string;
+    responded_at?: string | null;
+}
+
 interface Project {
     id: string;
     name: string;
@@ -42,11 +57,13 @@ interface Project {
     client_name?: string;
     tasks: Task[];
     receipts: Receipt[];
+    budgets: Budget[];
 }
 
 interface Props {
     project: Project;
     freelancerName: string;
+    token: string;
 }
 
 const STATE_LABELS: Record<string, string> = {
@@ -69,6 +86,16 @@ const RECEIPT_STATUS_LABELS: Record<string, string> = {
     paid: "Pagado",
     pending: "Pendiente",
     cancelled: "Cancelado",
+};
+
+const BUDGET_STATUS_LABELS: Record<string, string> = {
+    pending: "Pendiente de respuesta",
+    approved: "Aprobado",
+    rejected: "Rechazado",
+};
+
+const CURRENCY_SYMBOL: Record<string, string> = {
+    USD: "$", EUR: "€", GBP: "£", ARS: "$", MXN: "$", BRL: "R$",
 };
 
 function taskIcon(status: string) {
@@ -188,12 +215,38 @@ function handleDownloadPDF(receipt: Receipt, projectName: string, freelancerName
     setTimeout(() => win.print(), 600);
 }
 
-export default function PortalClient({ project, freelancerName }: Props) {
+export default function PortalClient({ project, freelancerName, token }: Props) {
     const [tasksExpanded, setTasksExpanded] = useState(true);
     const [paymentsExpanded, setPaymentsExpanded] = useState(true);
+    const [budgetsExpanded, setBudgetsExpanded] = useState(true);
+    const [budgets, setBudgets] = useState<Budget[]>(project.budgets ?? []);
+    const [respondingId, setRespondingId] = useState<string | null>(null);
+    const [respondError, setRespondError] = useState<string | null>(null);
 
     const tasks = project.tasks ?? [];
     const receipts = project.receipts ?? [];
+
+    async function handleRespond(budgetId: string, decision: "approved" | "rejected") {
+        if (decision === "rejected" && !window.confirm("¿Seguro que querés rechazar este presupuesto?")) {
+            return;
+        }
+        setRespondingId(budgetId);
+        setRespondError(null);
+        try {
+            const res = await fetch(`/api/portal/${token}/budgets/${budgetId}/respond`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ decision }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.detail || data.error || "No se pudo registrar la respuesta");
+            setBudgets((prev) => prev.map((b) => (b.id === budgetId ? data : b)));
+        } catch (err) {
+            setRespondError(err instanceof Error ? err.message : "Error al responder el presupuesto");
+        } finally {
+            setRespondingId(null);
+        }
+    }
 
     const completedTasks = tasks.filter((t) => t.status === "Completada").length;
     const inProgressTasks = tasks.filter((t) => t.status === "En Progreso").length;
@@ -277,6 +330,79 @@ export default function PortalClient({ project, freelancerName }: Props) {
                         <Stat label="Tareas completadas" value={`${completedTasks} / ${tasks.length}`} icon={<TrendingUp className="w-4 h-4" />} />
                     </div>
                 </div>
+
+                {/* Budgets */}
+                {budgets.length > 0 && (
+                    <div className="rounded-2xl border border-white/10 overflow-hidden" style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.15)", backdropFilter: "blur(12px)" }}>
+                        <button
+                            onClick={() => setBudgetsExpanded((p) => !p)}
+                            className="w-full flex items-center justify-between px-6 py-4 hover:bg-white/5 transition-colors"
+                        >
+                            <div className="flex items-center gap-3">
+                                <FileCheck2 className="w-5 h-5 text-purple-300" />
+                                <span className="text-white font-semibold">Presupuestos</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <span className="text-white/40 text-xs">
+                                    {budgets.filter((b) => b.status === "pending").length} pendientes
+                                </span>
+                                {budgetsExpanded ? <ChevronUp className="w-4 h-4 text-white/40" /> : <ChevronDown className="w-4 h-4 text-white/40" />}
+                            </div>
+                        </button>
+
+                        {budgetsExpanded && (
+                            <div className="divide-y divide-white/5">
+                                {respondError && (
+                                    <p className="text-red-300 text-xs px-6 py-2 bg-red-500/10">{respondError}</p>
+                                )}
+                                {budgets.map((budget) => {
+                                    const symbol = CURRENCY_SYMBOL[budget.currency] ?? budget.currency;
+                                    const isResponding = respondingId === budget.id;
+                                    return (
+                                        <div key={budget.id} className="flex items-start justify-between gap-4 px-6 py-4 bg-white/5 mx-3 mb-2 rounded-xl border border-white/10">
+                                            <div className="min-w-0">
+                                                <p className="text-white/90 text-sm font-medium truncate">{budget.name}</p>
+                                                {budget.description && (
+                                                    <p className="text-white/40 text-xs mt-0.5 line-clamp-2">{budget.description}</p>
+                                                )}
+                                                <p className="text-white font-semibold text-sm mt-1.5">{symbol}{formatAmount(budget.total_amount)}</p>
+                                                <span className={`inline-block mt-1.5 text-xs px-2 py-0.5 rounded-full ${budget.status === "approved"
+                                                    ? "bg-green-500/20 text-green-300"
+                                                    : budget.status === "rejected"
+                                                        ? "bg-red-500/20 text-red-300"
+                                                        : "bg-yellow-500/20 text-yellow-300"
+                                                    }`}>
+                                                    {BUDGET_STATUS_LABELS[budget.status] ?? budget.status}
+                                                </span>
+                                            </div>
+
+                                            {budget.status === "pending" && (
+                                                <div className="flex flex-col gap-2 shrink-0">
+                                                    <button
+                                                        onClick={() => handleRespond(budget.id, "approved")}
+                                                        disabled={isResponding}
+                                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500/20 hover:bg-green-500/30 text-green-300 text-xs font-medium transition-colors border border-green-500/30 disabled:opacity-50"
+                                                    >
+                                                        {isResponding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                                                        Aprobar
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleRespond(budget.id, "rejected")}
+                                                        disabled={isResponding}
+                                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 text-xs font-medium transition-colors border border-red-500/30 disabled:opacity-50"
+                                                    >
+                                                        {isResponding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />}
+                                                        Rechazar
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 {/* Payment history */}
                 {receipts.length > 0 && (

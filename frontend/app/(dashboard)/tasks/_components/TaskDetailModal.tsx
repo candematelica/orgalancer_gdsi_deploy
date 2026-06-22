@@ -55,7 +55,7 @@ export default function TaskDetailModal({ task, onClose, onDelete, onEdit, timeR
   return (
     <>
       <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
         onClick={(e) => e.target === e.currentTarget && onClose()}
       >
         <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto flex flex-col">
@@ -157,7 +157,7 @@ export default function TaskDetailModal({ task, onClose, onDelete, onEdit, timeR
 
       {/* Confirm delete dialog */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[200] p-4">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[200] p-4">
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl">
             <h3 className="font-semibold text-gray-800 mb-2">¿Eliminar tarea?</h3>
             <p className="text-sm text-gray-500 mb-1">

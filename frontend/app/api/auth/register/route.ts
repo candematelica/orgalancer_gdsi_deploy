@@ -3,20 +3,45 @@ import { NextRequest, NextResponse } from "next/server";
 export async function POST(req: NextRequest) {
   const body = await req.json();
 
-  const response = await fetch(`${process.env.API_URL}/auth/register`, {
+  const registerRes = await fetch(`${process.env.API_URL}/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
 
-  const data = await response.json();
+  const registerData = await registerRes.json();
 
-  if (!response.ok) {
+  if (!registerRes.ok) {
     return NextResponse.json(
-      { error: data.detail || "Error al registrar" },
-      { status: response.status }
+      { error: registerData.detail || "Error al registrar" },
+      { status: registerRes.status }
     );
   }
 
-  return NextResponse.json(data, { status: 201 });
+  const loginRes = await fetch(`${process.env.API_URL}/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email: body.email, password: body.password }),
+  });
+
+  const loginData = await loginRes.json();
+
+  if (!loginRes.ok) {
+    return NextResponse.json(registerData, { status: 201 });
+  }
+
+  const nextResponse = NextResponse.json(loginData, { status: 201 });
+
+  if (loginData.token) {
+    nextResponse.cookies.set({
+      name: "token",
+      value: loginData.token,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      path: "/",
+    });
+  }
+
+  return nextResponse;
 }

@@ -27,12 +27,13 @@ interface Task {
 
 interface TaskFormProps {
   taskToEdit?: Task | null;
+  defaultProjectId?: string;
   onSuccess: (isEdit: boolean) => void;
   onError: (msg: string) => void;
   onClose: () => void;
 }
 
-export default function TaskForm({ taskToEdit, onSuccess, onError, onClose }: TaskFormProps) {
+export default function TaskForm({ taskToEdit, defaultProjectId, onSuccess, onError, onClose }: TaskFormProps) {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [projects, setProjects] = useState<Project[]>([]);
@@ -40,7 +41,7 @@ export default function TaskForm({ taskToEdit, onSuccess, onError, onClose }: Ta
 
   const [selectedStatus, setSelectedStatus] = useState(taskToEdit?.status || "Pendiente");
   const [selectedPriority, setSelectedPriority] = useState(taskToEdit?.priority || "Media");
-  const [selectedProjectId, setSelectedProjectId] = useState(taskToEdit?.project_id || "");
+  const [selectedProjectId, setSelectedProjectId] = useState(taskToEdit?.project_id || defaultProjectId || "");
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
 
   const [availableTags, setAvailableTags] = useState<TagItem[]>([]);

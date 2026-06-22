@@ -54,13 +54,16 @@ def create_task(
 
 @router.get("/", response_model=List[TaskResponse])
 def get_tasks(
-        tag_id: Optional[str] = Query(None),
+        tag_id:     Optional[str] = Query(None),
+        project_id: Optional[str] = Query(None),
         db: Session = Depends(get_db),
         current_user: User = Depends(get_current_user),
 ):
     query = db.query(Task).options(joinedload(Task.project)).filter(Task.user_id == current_user.id)
     if tag_id:
         query = query.filter(Task.tags.any(Tag.id == tag_id))
+    if project_id:
+        query = query.filter(Task.project_id == project_id)
 
     return query.all()
 
