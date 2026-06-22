@@ -9,12 +9,15 @@ type Client = {
   email: string;
   client_type: string;
   phone_number: string;
+  address: string;
+  website: string;
+  extra_info: string;
 };
 
 interface Props {
   clients: Client[];
   onEdit: (client: Client) => void;
-  onDelete: (client: Client) => void;
+  onDelete: (client: Client) => void | Promise<void>;
 }
 
 export default function ClientsTable({ clients, onEdit, onDelete }: Props) {

@@ -201,8 +201,8 @@ export default function RevenuePage() {
               currency={currency}
               onEdit={handleEdit}
               onDelete={async (id) => {
-                const result = await remove(id);
-                if (!result.ok) setDeleteError(result.error ?? "Error al eliminar el gasto");
+                const ok = await remove(id);
+                if (!ok) setDeleteError("Error al eliminar el gasto");
               }}
               onViewReceipt={handleViewReceipt}
             />

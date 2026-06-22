@@ -5,7 +5,7 @@ export async function POST(
     req: NextRequest,
     { params }: { params: { id: string } }
 ) {
-    const token = cookies().get("token")?.value;
+    const token = (await cookies()).get("token")?.value;
 
     const res = await fetch(`${process.env.API_URL}/portal/${params.id}/generate-token`, {
         method: "POST",
