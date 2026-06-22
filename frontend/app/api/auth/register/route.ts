@@ -9,11 +9,13 @@ export async function POST(req: NextRequest) {
     body: JSON.stringify(body),
   });
 
-  const registerData = await registerRes.json();
+  const registerText = await registerRes.text();
+  let registerData: any = {};
+  try { registerData = JSON.parse(registerText); } catch { /* plain text error */ }
 
   if (!registerRes.ok) {
     return NextResponse.json(
-      { error: registerData.detail || "Error al registrar" },
+      { error: registerData.detail || registerText || "Error al registrar" },
       { status: registerRes.status }
     );
   }
@@ -24,7 +26,9 @@ export async function POST(req: NextRequest) {
     body: JSON.stringify({ email: body.email, password: body.password }),
   });
 
-  const loginData = await loginRes.json();
+  const loginText = await loginRes.text();
+  let loginData: any = {};
+  try { loginData = JSON.parse(loginText); } catch { /* plain text error */ }
 
   if (!loginRes.ok) {
     return NextResponse.json(registerData, { status: 201 });
