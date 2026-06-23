@@ -38,7 +38,6 @@ export function useReceipts(): UseReceiptsReturn {
         const res  = await fetch(url.toString(), {
           cache: "no-store",
         });
-        if (res.status === 401) { router.push("/login"); return; }
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Error al cargar recibos");
 
