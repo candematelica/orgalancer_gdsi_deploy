@@ -1,6 +1,7 @@
 import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, DeclarativeBase
+from sqlalchemy.pool import NullPool
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./orgalancer.db")
 
@@ -8,14 +9,13 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./orgalancer.db")
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
+is_postgres = DATABASE_URL.startswith("postgresql")
+connect_args = {"check_same_thread": False} if not is_postgres else {}
+
 engine = create_engine(
     DATABASE_URL,
     connect_args=connect_args,
-    pool_pre_ping=True,
-    pool_recycle=300,
-    pool_size=5,
-    max_overflow=10,
+    poolclass=NullPool if is_postgres else None,
 )
 SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
 
