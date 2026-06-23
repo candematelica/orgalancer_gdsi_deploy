@@ -21,7 +21,8 @@ export function useTimer(projectId: string, taskId: string, onTimeSaved: ((durat
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         try {
-          const { status: savedStatus, seconds: savedSeconds, description: savedDesc, projectId: savedProjectId, taskId: savedTaskId } = JSON.parse(saved);
+          const { status: savedStatus, seconds: savedSeconds, description: savedDesc, projectId: savedProjectId, taskId: savedTaskId, version } = JSON.parse(saved);
+          if (version !== "v2") { localStorage.removeItem(STORAGE_KEY); return; }
           if (savedProjectId === projectId && savedTaskId === taskId) {
             setStatus(savedStatus);
             setSeconds(savedSeconds);
@@ -49,7 +50,7 @@ useEffect(() => {
   // Guardar estado en localStorage cuando cambia
   useEffect(() => {
     if (typeof window !== "undefined" && status !== "idle") {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ status, seconds, description, projectId, taskId }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: "v2", status, seconds, description, projectId, taskId }));
     }
   }, [status, seconds, description, projectId, taskId]);
 
@@ -86,7 +87,7 @@ useEffect(() => {
         },
         body: JSON.stringify({
           project_id: projectId,
-          task_id: taskId,
+          ...(taskId ? { task_id: taskId } : {}),
           entry_date: new Date().toISOString().split("T")[0],
           duration_minutes: durationMinutes,
           description: description || "",
