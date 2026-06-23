@@ -66,11 +66,17 @@ def create_entry(
     db:   Session = Depends(get_db),
     user = Depends(get_current_user),
 ):
+    from app.models import Task
+    valid_task_id = None
+    if body.task_id:
+        exists = db.query(Task).filter(Task.id == body.task_id).first()
+        valid_task_id = body.task_id if exists else None
+
     entry = TimeEntry(
         id               = str(uuid.uuid4()),
         user_id          = user.id,
         project_id       = body.project_id,
-        task_id          = body.task_id,
+        task_id          = valid_task_id,
         entry_date       = body.entry_date,
         duration_minutes = body.duration_minutes,
         description      = body.description,
