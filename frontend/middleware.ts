@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const protectedRoutes = ["/dashboard", "/projects", "/clients", "/tasks", "/finances", "/assistant", "/settings"];
+const protectedRoutes = ["/dashboard", "/projects", "/clients", "/tasks", "/finances", "/assistant", "/settings", "/transactions", "/budget", "/reports", "/time"];
 
 export function middleware(request: NextRequest) {
     const token = request.cookies.get("token")?.value || "";
