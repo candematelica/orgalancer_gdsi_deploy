@@ -114,7 +114,7 @@ export default function ProjectsPage() {
         onStateChange={() => { actions.reload(); actions.reloadStats(); }}
         onStartTimer={(project) => {
           setTimerProject({
-            id: project.id,
+            id: "",
             title: project.name,
             project_id: project.id,
           });
