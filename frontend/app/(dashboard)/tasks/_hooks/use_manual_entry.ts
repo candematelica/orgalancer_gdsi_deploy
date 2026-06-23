@@ -37,7 +37,7 @@ export function useManualEntry({ fixedProjectId, fixedTaskId, onSaved }: UseManu
         },
         body: JSON.stringify({
           project_id:       fixedProjectId,
-          task_id:          fixedTaskId,
+          ...(fixedTaskId ? { task_id: fixedTaskId } : {}),
           entry_date:       date,
           duration_minutes: totalMinutes,
           description:      desc.trim(),
