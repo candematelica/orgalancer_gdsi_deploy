@@ -6,7 +6,7 @@ export async function GET(req: NextRequest) {
     const token = req.cookies.get("token")?.value;
     const { searchParams } = new URL(req.url);
 
-    const upstream = new URL(`${process.env.API_URL}/receipts`);
+    const upstream = new URL(`${process.env.API_URL}/receipts/`);
     const projectId = searchParams.get("project_id");
     const clientId  = searchParams.get("client_id");
     if (projectId) upstream.searchParams.set("project_id", projectId);
